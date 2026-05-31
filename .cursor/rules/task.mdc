@@ -1,0 +1,142 @@
+---
+description: Guidelines for creating and managing task lists in markdown files to track project progress
+globs:
+alwaysApply: false
+---
+
+---
+
+# Task List Management
+
+Guidelines for creating and managing task lists in markdown files to track project progress
+
+## Task List Creation
+
+1. Create task lists in a markdown file (in the project root):
+
+   - Use `TASKS.md` or a descriptive name relevant to the feature (e.g., `ASSISTANT_CHAT.md`)
+   - Include a clear title and description of the feature being implemented
+
+2. Structure the file with these sections:
+
+   ```markdown
+   # Feature Name Implementation
+
+   Brief description of the feature and its purpose.
+
+   ## Completed Tasks
+
+   - [x] Task 1 that has been completed
+   - [x] Task 2 that has been completed
+
+   ## In Progress Tasks
+
+   - [ ] Task 3 currently being worked on
+   - [ ] Task 4 to be completed soon
+
+   ## Future Tasks
+
+   - [ ] Task 5 planned for future implementation
+   - [ ] Task 6 planned for future implementation
+
+   ## Implementation Plan
+
+   Detailed description of how the feature will be implemented.
+
+   ### Relevant Files
+
+   - path/to/file1.ts - Description of purpose
+   - path/to/file2.ts - Description of purpose
+   ```
+
+## Task List Maintenance
+
+1. Update the task list as you progress:
+
+   - Mark tasks as completed by changing `[ ]` to `[x]`
+   - Append completion timestamps in `YYYY-MM-DD HH:mm UTC` format
+   - Add new tasks as they are identified
+   - Move tasks between sections as appropriate
+
+2. Keep "Relevant Files" section updated with:
+
+   - File paths that have been created or modified
+   - Brief descriptions of each file's purpose
+   - Status indicators (e.g., ✅) for completed components
+
+3. Add implementation details:
+   - Architecture decisions
+   - Data flow descriptions
+   - Technical components needed
+   - Environment configuration
+
+## AI Instructions
+
+When working with task lists, the AI should:
+
+1. Regularly update the task list file after implementing significant components
+2. Mark completed tasks with [x] when finished
+3. Add completion timestamps to finished items in `YYYY-MM-DD HH:mm UTC` format
+4. Add new tasks discovered during implementation
+5. Maintain the "Relevant Files" section with accurate file paths and descriptions
+6. Document implementation details, especially for complex features
+7. When implementing tasks one by one, first check which task to implement next
+8. After implementing a task, update the file to reflect progress
+
+## Example Task Update
+
+When updating a task from "In Progress" to "Completed":
+
+```markdown
+## In Progress Tasks
+
+- [ ] Implement database schema
+- [ ] Create API endpoints for data access
+
+## Completed Tasks
+
+- [x] Set up project structure (2026-03-02 22:18 UTC)
+- [x] Configure environment variables (2026-03-02 22:19 UTC)
+```
+
+Should become:
+
+```markdown
+## In Progress Tasks
+
+- [ ] Create API endpoints for data access
+
+## Completed Tasks
+
+- [x] Set up project structure (2026-03-02 22:18 UTC)
+- [x] Configure environment variables (2026-03-02 22:19 UTC)
+- [x] Implement database schema (2026-03-02 22:20 UTC)
+```
+
+**!IMPORTANT**: **DO NOT** externalize or document your work, usage guidelines, or benchmarks (e.g. `README.md`, `CONTRIBUTING.md`, `SUMMARY.md`, `USAGE_GUIDELINES.md` after completing the task, do not use emoji, unless explicitly instructed to do so. You may include a brief summary of your work, but do not create separate documentation files for it.
+
+---
+
+## Prod release checklist for directory sort refresh
+
+- [ ] Confirm local changes are merged and pushed
+- [ ] Deploy backend and frontend
+  - `npx convex deploy`
+  - `npm run build` (or your normal frontend deploy flow)
+- [ ] Run one time production backfill
+  - `npx convex run packages:backfillPackageReliabilityFields '{}' --prod`
+- [ ] Verify production data paths
+  - Directory sort `Newest` uses newest approved order
+  - `Most downloads` and `Recently updated` still sort correctly
+  - Rating sort still works with unrated items at the bottom
+- [ ] Verify admin behavior
+  - Approving a package sets `approvedAt`
+  - New submissions default to pending and visible
+  - Auto refresh panel still works as expected
+- [ ] Spot check 3 to 5 legacy packages for safe defaults
+  - `reviewStatus`
+  - `visibility`
+  - `submittedAt`
+  - `weeklyDownloads`
+  - `lastPublish`
+- [ ] Monitor logs for 10 to 15 minutes after release
