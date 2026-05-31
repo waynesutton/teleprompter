@@ -241,6 +241,76 @@ button {
   max-width: 52ch;
 }
 
+.script-reader.is-rsvp {
+  display: grid;
+  place-items: center;
+  padding: clamp(72px, 12vh, 130px) clamp(20px, 6vw, 96px) 34vh;
+  overflow: hidden;
+}
+
+.rsvp-reader {
+  display: grid;
+  width: min(92vw, 900px);
+  min-height: 38vh;
+  place-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.rsvp-word {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  width: min(100%, 18ch);
+  align-items: baseline;
+  color: #fff;
+  font-family: "Inter Tight", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(48px, 10vw, 168px);
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 0.95;
+  text-wrap: nowrap;
+}
+
+.rsvp-word-before {
+  text-align: right;
+}
+
+.rsvp-pivot {
+  color: #ff4d4d;
+}
+
+.rsvp-word-after {
+  text-align: left;
+}
+
+.rsvp-progress,
+.rsvp-empty {
+  color: var(--graphite-secondary);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.rsvp-stage-message {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 154px;
+  max-width: min(680px, calc(100vw - 32px));
+  margin: 0;
+  transform: translateX(-50%);
+  padding: 10px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--graphite-surface);
+  color: var(--graphite-primary);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.44);
+}
+
 .script-reader .direction-line,
 .script-preview .direction-line {
   color: rgba(255, 255, 255, 0.58);
@@ -1192,6 +1262,12 @@ kbd {
   padding: 0 7px 0 9px;
 }
 
+.reading-mode-select .custom-select-trigger {
+  grid-template-columns: 16px minmax(42px, 1fr) 12px;
+  min-height: 38px;
+  padding: 0 8px 0 9px;
+}
+
 .custom-select-icon {
   display: inline-flex;
   align-items: center;
@@ -1283,6 +1359,18 @@ button:disabled:hover,
   margin: 0;
   color: var(--muted-white);
   font-size: 13px;
+}
+
+.instruction-list {
+  display: grid;
+  gap: 10px;
+}
+
+.instruction-list p {
+  margin: 0;
+  color: var(--muted-white);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .delete-popover {

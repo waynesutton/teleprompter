@@ -8,12 +8,12 @@
 - `eslint.config.js` - ESLint configuration for TypeScript and React hooks.
 - `tsconfig.json` - TypeScript configuration for app and Convex code.
 - `src/main.tsx` - React entry point, Convex provider setup, and bundled Inter, Inter Tight, JetBrains Mono, Lexend, and OpenDyslexic font imports.
-- `src/App.tsx` - Three-tab teleprompter experience with Phosphor icons, prompting, keyboard tab switching, Tab 1 dock visibility toggle, app-driven script undo, script editing and preview, Graphite styled selectors, AI script generation controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, shared script save/load/delete, default settings, counter visibility, keyboard shortcuts, shortcut help modal, Tab 3 About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
-- `src/styles.css` - Graphite-inspired responsive interface styles, including shared control tokens, custom selectors with upward placement support, compact one-row desktop prompter dock, Tab 1 dock toggle, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator controls, shortcut modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, shortcut, About table, and wrapping shared library controls.
+- `src/App.tsx` - Three-tab teleprompter experience with Phosphor icons, prompting, optional RSVP/ORP reading mode, keyboard tab switching, Tab 1 dock visibility toggle, app-driven script undo, script editing and preview, Graphite styled selectors, AI script generation and RSVP rewrite controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, shared script save/load/delete, default settings, counter visibility, keyboard shortcuts, shortcut help modal, Tab 3 About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
+- `src/styles.css` - Graphite-inspired responsive interface styles, including shared control tokens, RSVP word and pivot rendering, custom selectors with upward placement support, compact one-row desktop prompter dock, Tab 1 dock toggle, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator controls, shortcut modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, shortcut, About table, and wrapping shared library controls.
 - `src/vite-env.d.ts` - Vite environment type references.
 - `convex/schema.ts` - Convex schema for saved local prompt state, shared default settings, Graphite font and dark grey color selection, and folder-aware shared saved scripts.
 - `convex/teleprompter.ts` - Convex queries and mutations for current prompt state, shared default settings, Graphite font and dark grey color validation, and folder-aware shared saved script save/delete.
-- `convex/aiScripts.ts` - Convex actions for AI provider setup status and script generation with OpenAI, Claude, OpenRouter, and Firecrawl URL scraping.
+- `convex/aiScripts.ts` - Convex actions for AI provider setup status, script generation with OpenAI, Claude, OpenRouter, Firecrawl URL scraping, and optional RSVP script rewriting.
 - `convex/voice.ts` - Convex action for checking whether `ELEVENLABS_API_KEY` is configured without exposing the key.
 - `convex/convex.config.ts` - Convex component registration, including static hosting.
 - `convex/staticHosting.ts` - Internal upload functions and deployment query for Convex static hosting.
@@ -36,5 +36,6 @@
 - `prds/elevenlabs-voice-setup-gate.md` - Product requirements for the Tab 1 ElevenLabs voice setup gate and modal.
 - `prds/tab-three-about-section.md` - Product requirements for the Tab 3 About section and feature table.
 - `prds/tab-one-dock-toggle-and-ui-overflow-fixes.md` - Product requirements for the Tab 1 speed menu direction, dock toggle, and Tab 2 library overflow fixes.
+- `prds/rsvp-reading-mode.md` - Product requirements for optional Tab 1 RSVP/ORP reading mode and AI rewrite support.
 - `changelog.md` - Project changelog.
 - `task.md` - Completed task log.

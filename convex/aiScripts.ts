@@ -33,6 +33,19 @@ type GenerateResult =
       message: string;
     };
 
+type RewriteResult =
+  | {
+      ok: true;
+      script: string;
+      provider: Provider;
+      model: string;
+    }
+  | {
+      ok: false;
+      code: "invalid_input" | "missing_setup" | "provider_error";
+      message: string;
+    };
+
 const MAX_CONTEXT_CHARS = 12000;
 
 const getEnv = (key: string) => process.env[key]?.trim() ?? "";
@@ -117,6 +130,19 @@ ${getLengthInstruction(length)}
 
 User style notes:
 ${instructions.trim() || "Use a clear, direct, human voice."}`;
+
+const getRsvpSystemPrompt = () => `You rewrite teleprompter scripts for RSVP speed reading with ORP highlighting.
+
+Rules:
+- Preserve the user's meaning and order.
+- Make sentences easier to read one word at a time.
+- Prefer short spoken phrases.
+- Remove filler, repeated setup, and overly long clauses.
+- Keep useful direction notes only when they help delivery, like [pause].
+- Keep --- page breaks only when they still help.
+- Do not explain your changes.
+- Do not wrap the output in code fences.
+- Output only the rewritten script body.`;
 
 const cleanGeneratedScript = (value: string) =>
   value
@@ -426,6 +452,81 @@ export const generateScript = action({
         ok: false,
         code: "provider_error",
         message: error instanceof Error ? error.message : "The provider could not generate a script.",
+      };
+    }
+  },
+});
+
+export const rewriteForRsvp = action({
+  args: {
+    input: v.string(),
+    provider: providerValidator,
+    modelOverride: v.optional(v.string()),
+  },
+  handler: async (_ctx, args): Promise<RewriteResult> => {
+    const input = args.input.trim();
+    if (!input) {
+      return {
+        ok: false,
+        code: "invalid_input",
+        message: "Add script text before using the RSVP rewrite.",
+      };
+    }
+
+    const configuredProviders = getConfiguredProviders();
+    if (configuredProviders.length === 0) {
+      return {
+        ok: false,
+        code: "missing_setup",
+        message: "These options are not setup. Contact the app creator to config.",
+      };
+    }
+
+    const selectedConfig =
+      args.provider === "auto"
+        ? configuredProviders[0]
+        : configuredProviders.find((config) => config.provider === args.provider);
+
+    if (!selectedConfig) {
+      return {
+        ok: false,
+        code: "missing_setup",
+        message: "These options are not setup. Contact the app creator to config.",
+      };
+    }
+
+    const model = args.modelOverride?.trim() || selectedConfig.model;
+    const systemPrompt = getRsvpSystemPrompt();
+    const userPrompt = `Rewrite this script for RSVP one-word-at-a-time reading:\n\n${truncateContext(input)}`;
+
+    try {
+      const rawScript =
+        selectedConfig.provider === "openai"
+          ? await callOpenAi(selectedConfig, model, systemPrompt, userPrompt)
+          : selectedConfig.provider === "claude"
+            ? await callClaude(selectedConfig, model, systemPrompt, userPrompt)
+            : await callOpenRouter(selectedConfig, model, systemPrompt, userPrompt);
+      const script = cleanGeneratedScript(rawScript);
+
+      if (!script) {
+        return {
+          ok: false,
+          code: "provider_error",
+          message: "The provider did not return rewritten script text.",
+        };
+      }
+
+      return {
+        ok: true,
+        script,
+        provider: selectedConfig.provider,
+        model,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        code: "provider_error",
+        message: error instanceof Error ? error.message : "The provider could not rewrite the script.",
       };
     }
   },

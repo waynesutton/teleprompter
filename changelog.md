@@ -39,6 +39,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added a Convex voice status action that checks for `ELEVENLABS_API_KEY` without exposing it.
 - Added a Tab 3 About section with brief open source copy and a feature table.
 - Added a bottom-right Tab 1 dock toggle with a `SquareHalfBottom` icon and `B` keyboard shortcut.
+- Added optional Tab 1 RSVP reading mode with ORP pivot highlighting, WPM control, progress scrubbing, and `V` keyboard toggle.
+- Added an optional AI RSVP rewrite action that keeps basic RSVP playback independent from AI setup.
+- Added Tab 3 instructions for using RSVP mode.
 
 ### Changed
 
@@ -58,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Kept voice control off by default, even when ElevenLabs is configured.
 - Made the Tab 1 speed multiplier menu open upward so it stays visible near the bottom edge.
 - Changed Tab 2 shared library controls to wrap inside the panel so long saved script controls do not overflow.
+- Updated voice setup copy so configured voice controls stay available while RSVP continues to use Start and WPM pace.
 
 ### Removed
 

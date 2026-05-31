@@ -35,6 +35,7 @@ type PromptFont = "system" | "graphite" | "lexend" | "opendyslexic";
 type LayoutMode = "left" | "centered";
 type AiProvider = "auto" | "openai" | "claude" | "openrouter";
 type AiLength = "short" | "long" | "open";
+type ReadingMode = "scroll" | "rsvp";
 type SelectOption<Value extends string> = { value: Value; label: string };
 
 type AiProviderStatus = {
@@ -117,6 +118,7 @@ const AI_LENGTH_OPTIONS: Array<SelectOption<AiLength>> = [
 ];
 const ABOUT_FEATURES = [
   ["Live prompting", "Run a clean browser teleprompter with paging, scroll speed, and fit controls."],
+  ["RSVP reading", "Read one word at a time with a red ORP pivot letter and a dedicated WPM control."],
   ["Script editor", "Write, preview, format, save, load, export, and organize scripts."],
   ["Presentation defaults", "Save preferred font, color, layout, guide, and speed settings."],
   ["Keyboard control", "Use shortcuts for playback, tabs, pages, sizing, speed, help, and undo."],
@@ -133,6 +135,7 @@ const SHORTCUTS = [
   ["Command/Ctrl + 3", "Open Tab 3 Help"],
   ["Command/Ctrl + Z", "Undo the last script tool change on Tab 2"],
   ["B", "Show or hide the Tab 1 control bar"],
+  ["V", "Switch between scroll and RSVP reading"],
   ["R", "Reset scroll"],
   ["+ / =", "Increase text size"],
   ["-", "Decrease text size"],
@@ -140,6 +143,11 @@ const SHORTCUTS = [
   ["[", "Decrease speed"],
   ["PageDown or Right Arrow", "Next page"],
   ["PageUp or Left Arrow", "Previous page"],
+];
+
+const READING_MODE_OPTIONS: Array<SelectOption<ReadingMode>> = [
+  { value: "scroll", label: "Scroll" },
+  { value: "rsvp", label: "RSVP" },
 ];
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -169,6 +177,61 @@ const getFirstUrl = (input: string) => {
   const markdownUrl = input.match(/\[[^\]]+\]\((https?:\/\/[^)\s]+)\)/i)?.[1];
   const plainUrl = input.match(/https?:\/\/[^\s)]+/i)?.[0];
   return (markdownUrl ?? plainUrl ?? "").replace(/[.,;!?]+$/, "");
+};
+
+const cleanRsvpText = (script: string) =>
+  script
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("[") && !line.match(/^---+$/))
+    .join(" ")
+    .replace(/<span data-color="(?:red|yellow|grey|darkgrey)">([^<]*)<\/span>/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const splitRsvpWords = (script: string) => cleanRsvpText(script).split(/\s+/).filter(Boolean);
+
+const getOrpIndex = (word: string) => {
+  const coreWord = word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+  const length = coreWord.length || word.length;
+
+  if (length <= 1) {
+    return 0;
+  }
+
+  if (length <= 5) {
+    return 1;
+  }
+
+  if (length <= 9) {
+    return 2;
+  }
+
+  if (length <= 13) {
+    return 3;
+  }
+
+  return 4;
+};
+
+const renderRsvpWord = (word: string) => {
+  const leading = word.match(/^[^\p{L}\p{N}]+/u)?.[0] ?? "";
+  const trailing = word.match(/[^\p{L}\p{N}]+$/u)?.[0] ?? "";
+  const core = word.slice(leading.length, word.length - trailing.length);
+  const pivotIndex = clamp(getOrpIndex(word), 0, Math.max(0, core.length - 1));
+
+  if (!core) {
+    return <span>{word}</span>;
+  }
+
+  return (
+    <>
+      <span className="rsvp-word-before">{leading}{core.slice(0, pivotIndex)}</span>
+      <span className="rsvp-pivot">{core[pivotIndex]}</span>
+      <span className="rsvp-word-after">{core.slice(pivotIndex + 1)}{trailing}</span>
+    </>
+  );
 };
 
 const renderInlineFormatting = (line: string) => {
@@ -283,6 +346,7 @@ function App() {
   const savedScriptsQuery = useQuery(api.teleprompter.listSavedScripts);
   const getAiProviderStatus = useAction(api.aiScripts.getAiProviderStatus);
   const generateAiScript = useAction(api.aiScripts.generateScript);
+  const rewriteScriptForRsvp = useAction(api.aiScripts.rewriteForRsvp);
   const getVoiceStatus = useAction(api.voice.getVoiceStatus);
   const saveSharedScript = useMutation(api.teleprompter.saveSharedScript);
   const saveDefaultSettings = useMutation(api.teleprompter.saveDefaultSettings);
@@ -295,6 +359,11 @@ function App() {
   const [isStageMeterVisible, setIsStageMeterVisible] = useState(true);
   const [isPrompterDockVisible, setIsPrompterDockVisible] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
+  const [readingMode, setReadingMode] = useState<ReadingMode>("scroll");
+  const [rsvpWordIndex, setRsvpWordIndex] = useState(0);
+  const [rsvpWpm, setRsvpWpm] = useState(320);
+  const [isRewritingForRsvp, setIsRewritingForRsvp] = useState(false);
+  const [rsvpMessage, setRsvpMessage] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [scriptTitle, setScriptTitle] = useState(getDefaultScriptTitle(DEFAULT_SCRIPT));
   const [scriptFolder, setScriptFolder] = useState("");
@@ -329,6 +398,9 @@ function App() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const frameRef = useRef<number | null>(null);
   const lastFrameAtRef = useRef<number | null>(null);
+  const rsvpFrameRef = useRef<number | null>(null);
+  const rsvpLastFrameAtRef = useRef<number | null>(null);
+  const rsvpCarryMsRef = useRef(0);
   const savedScripts = useMemo(() => savedScriptsQuery ?? [], [savedScriptsQuery]);
   const savedFolders = useMemo(() => {
     const folders = Array.from(
@@ -370,6 +442,9 @@ function App() {
   }, [filteredSavedScripts]);
   const pages = useMemo(() => draft.split(/\n\s*---+\s*\n/g), [draft]);
   const currentScript = pages[currentPageIndex] ?? pages[0] ?? "";
+  const rsvpWords = useMemo(() => splitRsvpWords(currentScript), [currentScript]);
+  const currentRsvpWord = rsvpWords[rsvpWordIndex] ?? "";
+  const rsvpProgress = rsvpWords.length > 0 ? ((rsvpWordIndex + 1) / rsvpWords.length) * 100 : 0;
   const effectiveSpeed = settings.speed * settings.speedMultiplier;
 
   const setDraftFromTool = useCallback((nextDraft: string) => {
@@ -388,11 +463,15 @@ function App() {
 
   const resetScroll = useCallback(() => {
     setIsRunning(false);
+    setRsvpWordIndex(0);
+    rsvpCarryMsRef.current = 0;
     setSettings((current) => ({ ...current, scroll: 0 }));
   }, []);
 
   const goToPage = useCallback((pageIndex: number) => {
     setIsRunning(false);
+    setRsvpWordIndex(0);
+    rsvpCarryMsRef.current = 0;
     setCurrentPageIndex(clamp(pageIndex, 0, Math.max(0, pages.length - 1)));
     setSettings((current) => ({ ...current, scroll: 0 }));
   }, [pages.length]);
@@ -436,11 +515,16 @@ function App() {
   }, []);
 
   const changeSpeed = useCallback((delta: number) => {
+    if (readingMode === "rsvp") {
+      setRsvpWpm((current) => clamp(current + delta * 5, 120, 800));
+      return;
+    }
+
     setSettings((current) => ({
       ...current,
       speed: clamp(current.speed + delta, 8, 160),
     }));
-  }, []);
+  }, [readingMode]);
 
   const applyDefaultPresentationSettings = useCallback(() => {
     if (!savedDefaultSettings) {
@@ -523,6 +607,11 @@ function App() {
   }, [currentPageIndex, pages.length]);
 
   useEffect(() => {
+    setRsvpWordIndex(0);
+    rsvpCarryMsRef.current = 0;
+  }, [currentScript, readingMode]);
+
+  useEffect(() => {
     const element = scriptRef.current;
     if (!element) {
       return;
@@ -544,7 +633,7 @@ function App() {
   }, [settings.fitToWindow, currentScript, fitTextToWindow]);
 
   useEffect(() => {
-    if (!isRunning) {
+    if (!isRunning || readingMode !== "scroll") {
       lastFrameAtRef.current = null;
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
@@ -581,7 +670,50 @@ function App() {
         cancelAnimationFrame(frameRef.current);
       }
     };
-  }, [isRunning, effectiveSpeed]);
+  }, [isRunning, effectiveSpeed, readingMode]);
+
+  useEffect(() => {
+    if (!isRunning || readingMode !== "rsvp" || rsvpWords.length === 0) {
+      rsvpLastFrameAtRef.current = null;
+      if (rsvpFrameRef.current) {
+        cancelAnimationFrame(rsvpFrameRef.current);
+      }
+      return;
+    }
+
+    const wordDurationMs = 60000 / rsvpWpm;
+
+    const tick = (timestamp: number) => {
+      const lastFrameAt = rsvpLastFrameAtRef.current ?? timestamp;
+      const elapsedMs = timestamp - lastFrameAt;
+      rsvpLastFrameAtRef.current = timestamp;
+      rsvpCarryMsRef.current += elapsedMs;
+
+      if (rsvpCarryMsRef.current >= wordDurationMs) {
+        const stepCount = Math.floor(rsvpCarryMsRef.current / wordDurationMs);
+        rsvpCarryMsRef.current %= wordDurationMs;
+
+        setRsvpWordIndex((current) => {
+          const nextIndex = Math.min(rsvpWords.length - 1, current + stepCount);
+          if (nextIndex >= rsvpWords.length - 1) {
+            setIsRunning(false);
+          }
+
+          return nextIndex;
+        });
+      }
+
+      rsvpFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    rsvpFrameRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rsvpFrameRef.current) {
+        cancelAnimationFrame(rsvpFrameRef.current);
+      }
+    };
+  }, [isRunning, readingMode, rsvpWpm, rsvpWords.length]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -651,7 +783,9 @@ function App() {
 
       if (event.code === "Space") {
         event.preventDefault();
-        setIsRunning((current) => !current);
+        if (readingMode !== "rsvp" || rsvpWords.length > 0) {
+          setIsRunning((current) => !current);
+        }
       }
 
       if (event.key === "Escape" || event.key.toLowerCase() === "s") {
@@ -665,6 +799,12 @@ function App() {
 
       if (event.key.toLowerCase() === "b") {
         setIsPrompterDockVisible((current) => !current);
+      }
+
+      if (event.key.toLowerCase() === "v") {
+        event.preventDefault();
+        setIsRunning(false);
+        setReadingMode((current) => (current === "scroll" ? "rsvp" : "scroll"));
       }
 
       if (event.key === "+" || event.key === "=") {
@@ -710,9 +850,11 @@ function App() {
     isAiGeneratorOpen,
     isAiSetupModalOpen,
     isNewScriptDialogOpen,
+    readingMode,
     isShortcutsModalOpen,
     isVoiceModalOpen,
     resetScroll,
+    rsvpWords.length,
     undoScriptDraftChange,
   ]);
 
@@ -907,6 +1049,54 @@ function App() {
     }
   };
 
+  const rewriteCurrentScriptForRsvp = async () => {
+    const source = draft.trim();
+    setRsvpMessage(null);
+
+    if (!source) {
+      setRsvpMessage("Add script text before using the RSVP rewrite.");
+      return;
+    }
+
+    setIsRewritingForRsvp(true);
+
+    try {
+      const status = await getAiProviderStatus();
+      const nextStatus = status as AiProviderStatus;
+      setAiProviderStatus(nextStatus);
+
+      if (nextStatus.providers.length === 0) {
+        setAiSetupMessage("These options are not setup. Contact the app creator to config.");
+        setIsAiSetupModalOpen(true);
+        return;
+      }
+
+      const result = await rewriteScriptForRsvp({
+        input: source,
+        provider: aiProvider,
+        modelOverride: aiModelOverride.trim() || undefined,
+      });
+
+      if (!result.ok) {
+        if (result.code === "missing_setup") {
+          setAiSetupMessage(result.message);
+          setIsAiSetupModalOpen(true);
+        } else {
+          setRsvpMessage(result.message);
+        }
+        return;
+      }
+
+      setDraftFromTool(result.script);
+      setCurrentPageIndex(0);
+      resetScroll();
+      setReadingMode("rsvp");
+      setRsvpMessage(`RSVP rewrite ready with ${result.model}.`);
+    } finally {
+      setIsRewritingForRsvp(false);
+    }
+  };
+
   const loadSelectedScript = () => {
     if (!selectedSavedScript) {
       setLibraryMessage("Choose a saved script to load.");
@@ -1092,17 +1282,37 @@ function App() {
               settings.layoutMode === "centered" ? "is-page-centered" : "",
               settings.mirrored ? "is-mirrored" : "",
               settings.fitToWindow ? "is-fit-window" : "",
+              readingMode === "rsvp" ? "is-rsvp" : "",
             ]
               .filter(Boolean)
               .join(" ")}
             style={{ fontSize: `${settings.fontSize}px` }}
           >
-            {currentScript.split("\n").map((line, index) => (
-              <p key={`${currentPageIndex}-${index}`} className={line.trim().startsWith("[") ? "direction-line" : undefined}>
-                {line ? renderInlineFormatting(line) : "\u00a0"}
-              </p>
-            ))}
+            {readingMode === "rsvp" ? (
+              <div className="rsvp-reader" aria-label="RSVP reader">
+                {currentRsvpWord ? (
+                  <>
+                    <div className="rsvp-word" aria-live="polite">
+                      {renderRsvpWord(currentRsvpWord)}
+                    </div>
+                    <div className="rsvp-progress" aria-label="RSVP progress">
+                      Word {Math.min(rsvpWordIndex + 1, rsvpWords.length).toLocaleString()} of {rsvpWords.length.toLocaleString()}
+                    </div>
+                  </>
+                ) : (
+                  <p className="rsvp-empty">Add script text on Tab 2 to use RSVP mode.</p>
+                )}
+              </div>
+            ) : (
+              currentScript.split("\n").map((line, index) => (
+                <p key={`${currentPageIndex}-${index}`} className={line.trim().startsWith("[") ? "direction-line" : undefined}>
+                  {line ? renderInlineFormatting(line) : "\u00a0"}
+                </p>
+              ))
+            )}
           </div>
+
+          {rsvpMessage ? <p className="rsvp-stage-message">{rsvpMessage}</p> : null}
 
           {isPrompterDockVisible ? (
             <div className="prompter-bottom-stack">
@@ -1112,7 +1322,7 @@ function App() {
                 <span>
                   Page {currentPageIndex + 1}/{pages.length}
                 </span>
-                <span>{Math.round(settings.scroll)}%</span>
+                <span>{Math.round(readingMode === "rsvp" ? rsvpProgress : settings.scroll)}%</span>
                 <button
                   className="meter-close"
                   type="button"
@@ -1151,7 +1361,11 @@ function App() {
                 <button
                   className="primary-button has-tooltip"
                   type="button"
-                  onClick={() => setIsRunning((current) => !current)}
+                  onClick={() => {
+                    if (readingMode !== "rsvp" || rsvpWords.length > 0) {
+                      setIsRunning((current) => !current);
+                    }
+                  }}
                   title={isRunning ? "Pause scrolling" : "Start scrolling"}
                   data-tooltip={isRunning ? "Pause" : "Start"}
                 >
@@ -1170,17 +1384,39 @@ function App() {
                 </button>
               </div>
               <label className="range-control scroll-range has-tooltip" title="Adjust current scroll position" data-tooltip="Scroll position">
-                <span>Scroll</span>
+                <span>{readingMode === "rsvp" ? "RSVP" : "Scroll"}</span>
                 <input
                   type="range"
                   min="0"
-                  max="100"
-                  value={settings.scroll}
-                  aria-label="Scroll position"
-                  onChange={(event) => updateSetting("scroll", Number(event.target.value))}
+                  max={readingMode === "rsvp" ? Math.max(0, rsvpWords.length - 1) : 100}
+                  value={readingMode === "rsvp" ? rsvpWordIndex : settings.scroll}
+                  aria-label={readingMode === "rsvp" ? "RSVP word position" : "Scroll position"}
+                  onChange={(event) => {
+                    if (readingMode === "rsvp") {
+                      setIsRunning(false);
+                      setRsvpWordIndex(Number(event.target.value));
+                      return;
+                    }
+
+                    updateSetting("scroll", Number(event.target.value));
+                  }}
                 />
               </label>
               <div className="control-cluster view-cluster" aria-label="View controls">
+                <CustomSelect
+                  ariaLabel="Reading mode"
+                  className="reading-mode-select has-tooltip"
+                  buttonClassName="reading-mode-trigger"
+                  icon={<Article size={16} weight="bold" />}
+                  options={READING_MODE_OPTIONS}
+                  placement="up"
+                  tooltip="Reading mode"
+                  value={readingMode}
+                  onChange={(value) => {
+                    setIsRunning(false);
+                    setReadingMode(value);
+                  }}
+                />
                 <button
                   className={settings.fitToWindow ? "icon-button has-tooltip is-active" : "icon-button has-tooltip"}
                   type="button"
@@ -1228,15 +1464,23 @@ function App() {
                   }
                 />
               </label>
-              <label className="range-control compact has-tooltip" title="Change base scroll speed" data-tooltip="Base speed">
-                <span>Speed</span>
+              <label className="range-control compact has-tooltip" title={readingMode === "rsvp" ? "Change RSVP words per minute" : "Change base scroll speed"} data-tooltip={readingMode === "rsvp" ? "RSVP WPM" : "Base speed"}>
+                <span>{readingMode === "rsvp" ? "WPM" : "Speed"}</span>
                 <input
                   type="range"
-                  min="8"
-                  max="160"
-                  value={settings.speed}
-                  aria-label="Base speed"
-                  onChange={(event) => updateSetting("speed", Number(event.target.value))}
+                  min={readingMode === "rsvp" ? "120" : "8"}
+                  max={readingMode === "rsvp" ? "800" : "160"}
+                  step={readingMode === "rsvp" ? "10" : "1"}
+                  value={readingMode === "rsvp" ? rsvpWpm : settings.speed}
+                  aria-label={readingMode === "rsvp" ? "RSVP words per minute" : "Base speed"}
+                  onChange={(event) => {
+                    if (readingMode === "rsvp") {
+                      setRsvpWpm(Number(event.target.value));
+                      return;
+                    }
+
+                    updateSetting("speed", Number(event.target.value));
+                  }}
                 />
               </label>
               <div className="control-cluster display-cluster" aria-label="Speed multiplier and display controls">
@@ -1284,6 +1528,17 @@ function App() {
                   data-tooltip={isCheckingVoiceStatus ? "Checking voice" : "Voice"}
                 >
                   <Microphone size={17} weight="bold" />
+                </button>
+                <button
+                  className="icon-button has-tooltip"
+                  type="button"
+                  onClick={rewriteCurrentScriptForRsvp}
+                  disabled={isRewritingForRsvp}
+                  aria-label="Rewrite script for RSVP"
+                  title="Rewrite script for RSVP"
+                  data-tooltip={isRewritingForRsvp ? "Rewriting" : "AI RSVP"}
+                >
+                  <Sparkle size={17} weight="bold" />
                 </button>
               </div>
               <button
@@ -1673,6 +1928,15 @@ function App() {
                   ))}
                 </div>
               </section>
+              <section className="settings-panel" aria-label="RSVP mode instructions">
+                <h2>RSVP mode</h2>
+                <div className="instruction-list">
+                  <p>Use the Reading mode control on Tab 1 and choose RSVP.</p>
+                  <p>Press Start to show one word at a time. The red letter is the ORP pivot point for your eyes.</p>
+                  <p>Use WPM to set the pace. Press V to switch back to the normal scrolling prompter.</p>
+                  <p>AI rewrite is optional. It only works when the site owner has configured an AI provider.</p>
+                </div>
+              </section>
             </div>
             <section className="settings-panel about-panel" aria-label="About">
               <div>
@@ -1978,7 +2242,7 @@ function App() {
             </div>
             <p id="voice-setup-copy" className="modal-copy">
               {voiceStatus?.isConfigured
-                ? "Voice control is ready. It stays off until you turn it on for this session."
+                ? "Voice control is ready. It stays off until you turn it on for this session. RSVP mode still uses the Start button and WPM pace."
                 : "Voice control is not set up yet. Ask the site owner to configure ELEVENLABS_API_KEY."}
             </p>
             {voiceStatus?.isConfigured && isVoiceModeRequested ? (
