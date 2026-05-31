@@ -121,7 +121,7 @@ const ABOUT_FEATURES = [
   ["Presentation defaults", "Save preferred font, color, layout, guide, and speed settings."],
   ["Keyboard control", "Use shortcuts for playback, tabs, pages, sizing, speed, help, and undo."],
   ["Optional tools", "AI script generation and voice controls appear when the site owner configures them."],
-  ["Open source", "The project is open source. The public repository will be added later."],
+  ["Open source", "The project is open source at github.com/waynesutton/teleprompter."],
 ] as const;
 
 const SHORTCUTS = [
