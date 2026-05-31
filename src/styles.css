@@ -388,15 +388,11 @@ button {
   flex: 0 0 auto;
 }
 
-.help-dock-button {
-  flex: 0 0 auto;
-}
-
 .dock-toggle-button {
   position: fixed;
-  z-index: 7;
+  z-index: 9;
   right: 16px;
-  bottom: 16px;
+  bottom: 132px;
   display: inline-flex;
   width: 42px;
   min-height: 42px;
@@ -425,9 +421,65 @@ button {
 }
 
 .dock-toggle-button.is-hidden-state {
+  bottom: 16px;
   border-color: var(--graphite-accent);
   background: var(--graphite-accent);
   color: var(--graphite-on-accent);
+}
+
+.gear-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.gear-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 10;
+  display: grid;
+  min-width: 210px;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--graphite-surface-raised);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.56);
+}
+
+.gear-menu-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--graphite-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.gear-menu-item:hover,
+.gear-menu-item:focus-visible {
+  outline: none;
+  background: var(--control-hover);
+  color: var(--graphite-primary);
+}
+
+.gear-menu-item.is-active {
+  background: var(--graphite-accent);
+  color: var(--graphite-on-accent);
+}
+
+.gear-menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
 }
 
 .bottom-tabs {
@@ -1503,8 +1555,7 @@ textarea:focus-visible {
   }
 
   .view-cluster,
-  .display-cluster,
-  .help-dock-button {
+  .display-cluster {
     flex: 1 1 auto;
   }
 

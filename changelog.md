@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added optional Tab 1 RSVP reading mode with ORP pivot highlighting, WPM control, progress scrubbing, and `V` keyboard toggle.
 - Added an optional AI RSVP rewrite action that keeps basic RSVP playback independent from AI setup.
 - Added Tab 3 instructions for using RSVP mode.
+- Added a Tab 1 Gear menu for secondary prompter options.
 
 ### Changed
 
@@ -62,6 +63,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Made the Tab 1 speed multiplier menu open upward so it stays visible near the bottom edge.
 - Changed Tab 2 shared library controls to wrap inside the panel so long saved script controls do not overflow.
 - Updated voice setup copy so configured voice controls stay available while RSVP continues to use Start and WPM pace.
+- Moved Fit, Center, Mirror, Guide, Shortcuts, and AI RSVP rewrite behind the Tab 1 Gear menu to shorten the main control bar.
+- Moved RSVP help copy into the Tab 3 About feature table instead of showing a separate settings panel.
+- Raised the SquareHalfBottom dock toggle above the bottom tabs while the Tab 1 bar is visible.
 
 ### Removed
 

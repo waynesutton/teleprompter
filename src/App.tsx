@@ -13,6 +13,7 @@ import {
   FloppyDisk,
   FolderOpen,
   Gauge,
+  GearSix,
   List,
   Microphone,
   Pause,
@@ -118,7 +119,7 @@ const AI_LENGTH_OPTIONS: Array<SelectOption<AiLength>> = [
 ];
 const ABOUT_FEATURES = [
   ["Live prompting", "Run a clean browser teleprompter with paging, scroll speed, and fit controls."],
-  ["RSVP reading", "Read one word at a time with a red ORP pivot letter and a dedicated WPM control."],
+  ["RSVP reading", "Choose RSVP on Tab 1 to read one word at a time. The red ORP letter marks where your eyes should anchor, and WPM sets the pace."],
   ["Script editor", "Write, preview, format, save, load, export, and organize scripts."],
   ["Presentation defaults", "Save preferred font, color, layout, guide, and speed settings."],
   ["Keyboard control", "Use shortcuts for playback, tabs, pages, sizing, speed, help, and undo."],
@@ -358,6 +359,7 @@ function App() {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [isStageMeterVisible, setIsStageMeterVisible] = useState(true);
   const [isPrompterDockVisible, setIsPrompterDockVisible] = useState(true);
+  const [isPrompterOptionsOpen, setIsPrompterOptionsOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [readingMode, setReadingMode] = useState<ReadingMode>("scroll");
   const [rsvpWordIndex, setRsvpWordIndex] = useState(0);
@@ -1417,35 +1419,6 @@ function App() {
                     setReadingMode(value);
                   }}
                 />
-                <button
-                  className={settings.fitToWindow ? "icon-button has-tooltip is-active" : "icon-button has-tooltip"}
-                  type="button"
-                  aria-pressed={settings.fitToWindow}
-                  title="Fit text to the window"
-                  data-tooltip="Fit"
-                  aria-label="Fit text to the window"
-                  onClick={() => {
-                    if (settings.fitToWindow) {
-                      updateSetting("fitToWindow", false);
-                      return;
-                    }
-
-                    fitTextToWindow();
-                  }}
-                >
-                  <CornersOut size={16} weight="bold" />
-                </button>
-                <button
-                  className={settings.layoutMode === "centered" ? "icon-button has-tooltip is-active" : "icon-button has-tooltip"}
-                  type="button"
-                  aria-pressed={settings.layoutMode === "centered"}
-                  title="Center the text block while keeping text left aligned"
-                  data-tooltip="Center"
-                  aria-label="Center text block"
-                  onClick={() => updateSetting("layoutMode", settings.layoutMode === "centered" ? "left" : "centered")}
-                >
-                  <TextAlignCenter size={16} weight="bold" />
-                </button>
               </div>
               <label className="range-control compact has-tooltip" title="Change prompter text size" data-tooltip="Text size">
                 <span>Size</span>
@@ -1496,28 +1469,6 @@ function App() {
                   onChange={(value) => updateSetting("speedMultiplier", Number(value))}
                 />
                 <button
-                  className={settings.mirrored ? "icon-button has-tooltip is-active" : "icon-button has-tooltip"}
-                  type="button"
-                  onClick={() => updateSetting("mirrored", !settings.mirrored)}
-                  aria-pressed={settings.mirrored}
-                  aria-label="Mirror text"
-                  title="Mirror text"
-                  data-tooltip="Mirror"
-                >
-                  <FlipHorizontal size={17} weight="bold" />
-                </button>
-                <button
-                  className={settings.guide ? "icon-button has-tooltip is-active" : "icon-button has-tooltip"}
-                  type="button"
-                  onClick={() => updateSetting("guide", !settings.guide)}
-                  aria-pressed={settings.guide}
-                  aria-label="Toggle reading guide"
-                  title="Toggle reading guide"
-                  data-tooltip="Guide"
-                >
-                  <SlidersHorizontal size={17} weight="bold" />
-                </button>
-                <button
                   className={isVoiceModeRequested ? "icon-button has-tooltip is-active" : "icon-button has-tooltip"}
                   type="button"
                   onClick={openVoiceModal}
@@ -1529,28 +1480,100 @@ function App() {
                 >
                   <Microphone size={17} weight="bold" />
                 </button>
-                <button
-                  className="icon-button has-tooltip"
-                  type="button"
-                  onClick={rewriteCurrentScriptForRsvp}
-                  disabled={isRewritingForRsvp}
-                  aria-label="Rewrite script for RSVP"
-                  title="Rewrite script for RSVP"
-                  data-tooltip={isRewritingForRsvp ? "Rewriting" : "AI RSVP"}
+                <div
+                  className="gear-menu-wrap"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                      setIsPrompterOptionsOpen(false);
+                    }
+                  }}
                 >
-                  <Sparkle size={17} weight="bold" />
-                </button>
+                  <button
+                    className={isPrompterOptionsOpen ? "icon-button has-tooltip is-active" : "icon-button has-tooltip"}
+                    type="button"
+                    onClick={() => setIsPrompterOptionsOpen((current) => !current)}
+                    aria-expanded={isPrompterOptionsOpen}
+                    aria-haspopup="menu"
+                    aria-label="Open prompter options"
+                    title="Open prompter options"
+                    data-tooltip="Options"
+                  >
+                    <GearSix size={17} weight="bold" />
+                  </button>
+                  {isPrompterOptionsOpen ? (
+                    <div className="gear-menu" role="menu" aria-label="Prompter options">
+                      <button
+                        className={settings.fitToWindow ? "gear-menu-item is-active" : "gear-menu-item"}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          if (settings.fitToWindow) {
+                            updateSetting("fitToWindow", false);
+                          } else {
+                            fitTextToWindow();
+                          }
+                          setIsPrompterOptionsOpen(false);
+                        }}
+                      >
+                        <CornersOut size={16} weight="bold" />
+                        <span>Fit text</span>
+                      </button>
+                      <button
+                        className={settings.layoutMode === "centered" ? "gear-menu-item is-active" : "gear-menu-item"}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => updateSetting("layoutMode", settings.layoutMode === "centered" ? "left" : "centered")}
+                      >
+                        <TextAlignCenter size={16} weight="bold" />
+                        <span>Center text</span>
+                      </button>
+                      <button
+                        className={settings.mirrored ? "gear-menu-item is-active" : "gear-menu-item"}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => updateSetting("mirrored", !settings.mirrored)}
+                      >
+                        <FlipHorizontal size={16} weight="bold" />
+                        <span>Mirror text</span>
+                      </button>
+                      <button
+                        className={settings.guide ? "gear-menu-item is-active" : "gear-menu-item"}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => updateSetting("guide", !settings.guide)}
+                      >
+                        <SlidersHorizontal size={16} weight="bold" />
+                        <span>Reading guide</span>
+                      </button>
+                      <button
+                        className="gear-menu-item"
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setIsShortcutsModalOpen(true);
+                          setIsPrompterOptionsOpen(false);
+                        }}
+                      >
+                        <Question size={16} weight="bold" />
+                        <span>Shortcuts</span>
+                      </button>
+                      <button
+                        className="gear-menu-item"
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          rewriteCurrentScriptForRsvp();
+                          setIsPrompterOptionsOpen(false);
+                        }}
+                        disabled={isRewritingForRsvp}
+                      >
+                        <Sparkle size={16} weight="bold" />
+                        <span>{isRewritingForRsvp ? "Rewriting" : "AI RSVP rewrite"}</span>
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
-              <button
-                className="icon-button help-dock-button has-tooltip"
-                type="button"
-                onClick={() => setIsShortcutsModalOpen(true)}
-                aria-label="Open keyboard shortcuts"
-                title="Open keyboard shortcuts"
-                data-tooltip="Shortcuts"
-              >
-                <Question size={17} weight="bold" />
-              </button>
               </div>
             </div>
           ) : null}
@@ -1926,15 +1949,6 @@ function App() {
                       <span>{action}</span>
                     </div>
                   ))}
-                </div>
-              </section>
-              <section className="settings-panel" aria-label="RSVP mode instructions">
-                <h2>RSVP mode</h2>
-                <div className="instruction-list">
-                  <p>Use the Reading mode control on Tab 1 and choose RSVP.</p>
-                  <p>Press Start to show one word at a time. The red letter is the ORP pivot point for your eyes.</p>
-                  <p>Use WPM to set the pace. Press V to switch back to the normal scrolling prompter.</p>
-                  <p>AI rewrite is optional. It only works when the site owner has configured an AI provider.</p>
                 </div>
               </section>
             </div>

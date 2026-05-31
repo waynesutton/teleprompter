@@ -4,6 +4,7 @@
 
 ## completed
 
+- [x] 2026-05-31 06:31 UTC - Compacted Tab 1 secondary controls into a Gear menu, lifted the dock toggle, and folded RSVP help into About features. PRD: `prds/tab-one-compact-options-menu.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and static hosting deploy.
 - [x] 2026-05-31 06:15 UTC - Added optional Tab 1 RSVP/ORP reading mode with non-AI playback, AI rewrite support, and voice-compatible controls. PRD: `prds/rsvp-reading-mode.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, `npx convex dev --once`, and static hosting deploy.
 - [x] 2026-05-31 06:05 UTC - Fixed Tab 1 speed menu direction, added a bottom-right dock toggle, and tightened Tab 2 library wrapping. PRD: `prds/tab-one-dock-toggle-and-ui-overflow-fixes.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and static hosting deploy.
 - [x] 2026-05-31 05:49 UTC - Added About section to Tab 3. PRD: `prds/tab-three-about-section.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and static hosting deploy.
