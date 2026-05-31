@@ -42,4 +42,20 @@ export default defineSchema({
   })
     .index("by_canonicalTitle", ["canonicalTitle"])
     .index("by_updatedAt", ["updatedAt"]),
+  scriptVoiceProfiles: defineTable({
+    canonicalName: v.string(),
+    name: v.string(),
+    audience: v.string(),
+    tone: v.string(),
+    pacing: v.string(),
+    bannedWords: v.string(),
+    preferredPhrases: v.string(),
+    examples: v.string(),
+    structure: v.string(),
+    defaultLength: v.union(v.literal("short"), v.literal("long"), v.literal("open")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_canonicalName", ["canonicalName"])
+    .index("by_updatedAt", ["updatedAt"]),
 });

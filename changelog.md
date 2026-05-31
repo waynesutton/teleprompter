@@ -43,6 +43,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added an optional AI RSVP rewrite action that keeps basic RSVP playback independent from AI setup.
 - Added Tab 3 instructions for using RSVP mode.
 - Added a Tab 1 Gear menu for secondary prompter options.
+- Added a Tab 1 Layout icon beside the Prompter tab for hiding and showing the main control bar.
+- Added `C` as a keyboard shortcut for showing and hiding the countdown counter.
+- Added built-in Script Voice Profiles for AI script generation, including WayneSutton.ai, Teleprompter Natural, Founder Update, YouTube Intro, Investor Pitch, Educator, and High-Energy Creator.
+- Added Convex-backed custom Script Voice Profiles with save, edit, import-notes, and delete controls in the Tab 2 generator modal.
+- Added a top-of-Tab-3 app docs section explaining the app workflow, Script Voice Profiles, RSVP, saving, shortcuts, and separate narration voice setup.
+- Added a custom SVG favicon, 1200x630 social card, Open Graph metadata, Twitter large image card metadata, JSON-LD app/FAQ data, robots policy, and sitemap.
 
 ### Changed
 
@@ -66,6 +72,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Moved Fit, Center, Mirror, Guide, Shortcuts, and AI RSVP rewrite behind the Tab 1 Gear menu to shorten the main control bar.
 - Moved RSVP help copy into the Tab 3 About feature table instead of showing a separate settings panel.
 - Raised the SquareHalfBottom dock toggle above the bottom tabs while the Tab 1 bar is visible.
+- Kept the Tab 1 tab bar visible when the main control bar is hidden so keyboard-first prompting remains usable.
+- Updated the hide/show shortcut to `H` or `B`.
+- Increased Tab 1 vertical spacing between the countdown counter, main control bar, and tab row.
+- Increased Tab 1 scroll exit space so final script text can pass the reading guide and leave the visible area.
+- Adjusted Fit-to-window sizing to measure with the fit layout instead of the teleprompter exit padding.
+- Updated AI script generation prompts to apply the selected Script Voice Profile while keeping ElevenLabs narration voice separate.
+- Refreshed the README with current features, app workflow, optional AI/voice setup, and public metadata details.
 
 ### Removed
 

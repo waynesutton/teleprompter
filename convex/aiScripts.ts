@@ -8,9 +8,31 @@ const providerValidator = v.union(
   v.literal("openrouter"),
 );
 const lengthValidator = v.union(v.literal("short"), v.literal("long"), v.literal("open"));
+const scriptVoiceProfileValidator = v.object({
+  name: v.string(),
+  audience: v.string(),
+  tone: v.string(),
+  pacing: v.string(),
+  bannedWords: v.string(),
+  preferredPhrases: v.string(),
+  examples: v.string(),
+  structure: v.string(),
+  defaultLength: lengthValidator,
+});
 
 type Provider = "openai" | "claude" | "openrouter";
 type GenerationLength = "short" | "long" | "open";
+type ScriptVoiceProfile = {
+  name: string;
+  audience: string;
+  tone: string;
+  pacing: string;
+  bannedWords: string;
+  preferredPhrases: string;
+  examples: string;
+  structure: string;
+  defaultLength: GenerationLength;
+};
 
 type ProviderConfig = {
   provider: Provider;
@@ -112,7 +134,22 @@ const getLengthInstruction = (length: GenerationLength) => {
   return "Choose the right length for the source and topic. Do not pad.";
 };
 
-const getSystemPrompt = (length: GenerationLength, instructions: string) => `You write teleprompter scripts for one specific viewer.
+const getScriptVoicePrompt = (profile: ScriptVoiceProfile | undefined) => {
+  if (!profile) {
+    return "Script voice: Teleprompter Natural. Use a clear, direct, human voice.";
+  }
+
+  return `Script voice: ${profile.name}
+Audience: ${profile.audience || "One specific viewer who needs a useful spoken script."}
+Tone: ${profile.tone || "Clear, direct, human, and teleprompter-friendly."}
+Pacing: ${profile.pacing || "Short spoken sentences with natural transitions."}
+Banned words or phrases: ${profile.bannedWords || "No extra banned words beyond the global list."}
+Preferred phrases or moves: ${profile.preferredPhrases || "Use plain phrasing and specific examples."}
+Example source or imported notes: ${profile.examples || "No examples provided."}
+Script structure: ${profile.structure || "Open with a useful hook, explain the point, then close cleanly."}`;
+};
+
+const getSystemPrompt = (length: GenerationLength, instructions: string, profile: ScriptVoiceProfile | undefined) => `You write teleprompter scripts for one specific viewer.
 
 Rules:
 - Solve one clear problem for that viewer.
@@ -127,6 +164,8 @@ Rules:
 
 Length:
 ${getLengthInstruction(length)}
+
+${getScriptVoicePrompt(profile)}
 
 User style notes:
 ${instructions.trim() || "Use a clear, direct, human voice."}`;
@@ -371,6 +410,7 @@ export const generateScript = action({
     provider: providerValidator,
     modelOverride: v.optional(v.string()),
     length: lengthValidator,
+    scriptVoiceProfile: v.optional(scriptVoiceProfileValidator),
     instructions: v.optional(v.string()),
   },
   handler: async (_ctx, args): Promise<GenerateResult> => {
@@ -417,7 +457,7 @@ export const generateScript = action({
     }
 
     const model = args.modelOverride?.trim() || selectedConfig.model;
-    const systemPrompt = getSystemPrompt(args.length, args.instructions ?? "");
+    const systemPrompt = getSystemPrompt(args.length, args.instructions ?? "", args.scriptVoiceProfile);
     const sourceContext = scraped?.ok
       ? `Source URL: ${url}\n\nScraped page markdown:\n${scraped.markdown}\n\nUser notes:\n${truncateContext(input)}`
       : `User topic or notes:\n${truncateContext(input)}`;

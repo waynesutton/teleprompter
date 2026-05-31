@@ -14,6 +14,7 @@ import {
   FolderOpen,
   Gauge,
   GearSix,
+  Layout,
   List,
   Microphone,
   Pause,
@@ -23,12 +24,12 @@ import {
   Question,
   SlidersHorizontal,
   Sparkle,
-  SquareHalfBottom,
   TextAlignCenter,
   Trash,
   X,
 } from "@phosphor-icons/react";
 import { api } from "../convex/_generated/api";
+import type { Id } from "../convex/_generated/dataModel";
 
 type PromptTab = "prompter" | "script" | "help";
 type TextColor = "white" | "red" | "yellow" | "grey" | "darkgrey";
@@ -38,6 +39,19 @@ type AiProvider = "auto" | "openai" | "claude" | "openrouter";
 type AiLength = "short" | "long" | "open";
 type ReadingMode = "scroll" | "rsvp";
 type SelectOption<Value extends string> = { value: Value; label: string };
+type ScriptVoiceProfile = {
+  id: string;
+  name: string;
+  audience: string;
+  tone: string;
+  pacing: string;
+  bannedWords: string;
+  preferredPhrases: string;
+  examples: string;
+  structure: string;
+  defaultLength: AiLength;
+  source: "builtin" | "custom";
+};
 
 type AiProviderStatus = {
   providers: Array<{ provider: Exclude<AiProvider, "auto">; label: string; model: string }>;
@@ -117,6 +131,110 @@ const AI_LENGTH_OPTIONS: Array<SelectOption<AiLength>> = [
   { value: "long", label: "5+ min" },
   { value: "open", label: "Open" },
 ];
+const BUILT_IN_SCRIPT_VOICES: ScriptVoiceProfile[] = [
+  {
+    id: "builtin-waynesutton",
+    name: "WayneSutton.ai",
+    audience: "Builders, founders, creators, and operators who want practical direction.",
+    tone: "Direct, practical, founder/operator voice. Strong point of view without hype.",
+    pacing: "Short spoken sentences. Natural transitions. Explain what matters and why.",
+    bannedWords: "No generic AI phrases, over-polished corporate language, or empty hype.",
+    preferredPhrases: "Use specific claims, useful framing, and clear next steps.",
+    examples: "Write like a person preparing to speak on camera, not like a blog post.",
+    structure: "Open with the point, give the useful context, make the recommendation, close cleanly.",
+    defaultLength: "short",
+    source: "builtin",
+  },
+  {
+    id: "builtin-natural",
+    name: "Teleprompter Natural",
+    audience: "Viewers who need a clear, low-friction spoken explanation.",
+    tone: "Plain, calm, human, and easy to read out loud.",
+    pacing: "Medium pace with short paragraphs and simple transitions.",
+    bannedWords: "Avoid hype, jargon, and filler.",
+    preferredPhrases: "Use everyday language and concrete examples.",
+    examples: "Sounds like a prepared speaker talking directly to one viewer.",
+    structure: "Hook, context, useful body, clean ending.",
+    defaultLength: "short",
+    source: "builtin",
+  },
+  {
+    id: "builtin-founder-update",
+    name: "Founder Update",
+    audience: "Customers, community members, teammates, or stakeholders.",
+    tone: "Clear, confident, transparent, and product-minded.",
+    pacing: "Concise sections with direct transitions.",
+    bannedWords: "Avoid vague launch language and inflated claims.",
+    preferredPhrases: "Say what changed, why it matters, and what happens next.",
+    examples: "A founder update that respects the viewer's time.",
+    structure: "Problem, update, proof, impact, next step.",
+    defaultLength: "short",
+    source: "builtin",
+  },
+  {
+    id: "builtin-youtube-intro",
+    name: "YouTube Intro",
+    audience: "Viewers deciding whether to keep watching.",
+    tone: "Fast hook, conversational, clear, and energetic without shouting.",
+    pacing: "Quick opening, short lines, frequent resets.",
+    bannedWords: "No clickbait, fake urgency, or generic creator filler.",
+    preferredPhrases: "Use curiosity, payoff, and a clear reason to watch.",
+    examples: "Feels like a creator opening a focused tutorial or update.",
+    structure: "Hook, promise, quick credibility, first useful point.",
+    defaultLength: "short",
+    source: "builtin",
+  },
+  {
+    id: "builtin-investor-pitch",
+    name: "Investor Pitch",
+    audience: "Investors or business partners evaluating a clear opportunity.",
+    tone: "Concise, proof-driven, business-focused, and grounded.",
+    pacing: "Tight sections with numbers or evidence when available.",
+    bannedWords: "Avoid hype, vague market claims, and unsupported certainty.",
+    preferredPhrases: "Connect problem, traction, market, product, and ask.",
+    examples: "A crisp pitch that can be spoken naturally.",
+    structure: "Problem, customer, solution, traction, business model, ask.",
+    defaultLength: "short",
+    source: "builtin",
+  },
+  {
+    id: "builtin-educator",
+    name: "Educator",
+    audience: "Learners who need a clear explanation without feeling talked down to.",
+    tone: "Calm, structured, practical, and patient.",
+    pacing: "Step-by-step with short recaps.",
+    bannedWords: "Avoid jargon unless it is explained simply.",
+    preferredPhrases: "Use examples, contrasts, and plain definitions.",
+    examples: "Sounds like a good teacher explaining one useful idea.",
+    structure: "Set the problem, explain the idea, show an example, recap.",
+    defaultLength: "long",
+    source: "builtin",
+  },
+  {
+    id: "builtin-high-energy-creator",
+    name: "High-Energy Creator",
+    audience: "Social video viewers who need momentum and clear payoff.",
+    tone: "Energetic, punchy, direct, and viewer-focused.",
+    pacing: "Short lines, strong hooks, quick turns, no long setup.",
+    bannedWords: "No imitation of a specific real person, no empty hype.",
+    preferredPhrases: "Use contrast, stakes, and direct viewer benefit.",
+    examples: "Feels like a focused creator script, not a copied influencer voice.",
+    structure: "Pattern interrupt, promise, key beats, strong close.",
+    defaultLength: "short",
+    source: "builtin",
+  },
+];
+const EMPTY_SCRIPT_VOICE_FORM = {
+  name: "",
+  audience: "",
+  tone: "",
+  pacing: "",
+  bannedWords: "",
+  preferredPhrases: "",
+  examples: "",
+  structure: "",
+  defaultLength: "short" as AiLength,
+};
 const ABOUT_FEATURES = [
   ["Live prompting", "Run a clean browser teleprompter with paging, scroll speed, and fit controls."],
   ["RSVP reading", "Choose RSVP on Tab 1 to read one word at a time. The red ORP letter marks where your eyes should anchor, and WPM sets the pace."],
@@ -127,6 +245,16 @@ const ABOUT_FEATURES = [
   ["Open source", "The project is open source at github.com/waynesutton/teleprompter."],
 ] as const;
 
+const APP_DOCS = [
+  ["Tab 1 Prompter", "Read the current script live. Use Start, speed, page controls, fit, guide, mirror, RSVP, and the hide-bar control for recording."],
+  ["Tab 2 Script", "Write or paste the source script, preview formatting, add page breaks, save scripts into folders, and generate scripts when AI is configured."],
+  ["Tab 3 Help", "Set defaults, review shortcuts, read app docs, and check the open source feature list."],
+  ["Script Voice Profiles", "Choose a writing tone for AI-generated scripts. Built-in profiles work immediately, and custom profiles can be saved, edited, deleted, or imported from notes."],
+  ["Narration Voice", "Audio narration is separate from script writing tone. It only becomes usable when the site owner configures the ElevenLabs key."],
+  ["RSVP Mode", "Switch Tab 1 to RSVP to show one word at a time with a red ORP pivot letter. AI is optional and only helps rewrite scripts for easier RSVP reading."],
+  ["Saving", "Generated text replaces the editor draft, but it is not saved to the shared library until you click a save control."],
+] as const;
+
 const SHORTCUTS = [
   ["Space", "Start or pause"],
   ["S or Escape", "Stop and return to the top"],
@@ -135,7 +263,8 @@ const SHORTCUTS = [
   ["Command/Ctrl + 2", "Open Tab 2 Script"],
   ["Command/Ctrl + 3", "Open Tab 3 Help"],
   ["Command/Ctrl + Z", "Undo the last script tool change on Tab 2"],
-  ["B", "Show or hide the Tab 1 control bar"],
+  ["H or B", "Show or hide the Tab 1 control bar"],
+  ["C", "Show or hide the countdown counter"],
   ["V", "Switch between scroll and RSVP reading"],
   ["R", "Reset scroll"],
   ["+ / =", "Increase text size"],
@@ -345,6 +474,7 @@ function App() {
   const savedPrompt = useQuery(api.teleprompter.getCurrent);
   const savedDefaultSettings = useQuery(api.teleprompter.getDefaultSettings);
   const savedScriptsQuery = useQuery(api.teleprompter.listSavedScripts);
+  const savedScriptVoiceProfilesQuery = useQuery(api.scriptVoices.list);
   const getAiProviderStatus = useAction(api.aiScripts.getAiProviderStatus);
   const generateAiScript = useAction(api.aiScripts.generateScript);
   const rewriteScriptForRsvp = useAction(api.aiScripts.rewriteForRsvp);
@@ -352,6 +482,8 @@ function App() {
   const saveSharedScript = useMutation(api.teleprompter.saveSharedScript);
   const saveDefaultSettings = useMutation(api.teleprompter.saveDefaultSettings);
   const deleteSharedScript = useMutation(api.teleprompter.deleteSharedScript);
+  const saveScriptVoiceProfile = useMutation(api.scriptVoices.save);
+  const deleteScriptVoiceProfile = useMutation(api.scriptVoices.remove);
   const [activeTab, setActiveTab] = useState<PromptTab>("prompter");
   const [draft, setDraft] = useState(DEFAULT_SCRIPT);
   const [draftUndoStack, setDraftUndoStack] = useState<string[]>([]);
@@ -388,6 +520,11 @@ function App() {
   const [aiProviderStatus, setAiProviderStatus] = useState<AiProviderStatus | null>(null);
   const [aiProvider, setAiProvider] = useState<AiProvider>("auto");
   const [aiLength, setAiLength] = useState<AiLength>("short");
+  const [selectedScriptVoiceId, setSelectedScriptVoiceId] = useState("builtin-waynesutton");
+  const [scriptVoiceForm, setScriptVoiceForm] = useState(EMPTY_SCRIPT_VOICE_FORM);
+  const [scriptVoiceMessage, setScriptVoiceMessage] = useState<string | null>(null);
+  const [isSavingScriptVoice, setIsSavingScriptVoice] = useState(false);
+  const [isDeletingScriptVoice, setIsDeletingScriptVoice] = useState(false);
   const [aiModelOverride, setAiModelOverride] = useState("");
   const [aiInstructions, setAiInstructions] = useState("");
   const [aiMessage, setAiMessage] = useState<string | null>(null);
@@ -404,6 +541,33 @@ function App() {
   const rsvpLastFrameAtRef = useRef<number | null>(null);
   const rsvpCarryMsRef = useRef(0);
   const savedScripts = useMemo(() => savedScriptsQuery ?? [], [savedScriptsQuery]);
+  const savedScriptVoiceProfiles = useMemo(() => savedScriptVoiceProfilesQuery ?? [], [savedScriptVoiceProfilesQuery]);
+  const scriptVoiceProfiles = useMemo<ScriptVoiceProfile[]>(() => {
+    const customProfiles = savedScriptVoiceProfiles.map((profile) => ({
+      id: `custom:${profile._id}`,
+      name: profile.name,
+      audience: profile.audience,
+      tone: profile.tone,
+      pacing: profile.pacing,
+      bannedWords: profile.bannedWords,
+      preferredPhrases: profile.preferredPhrases,
+      examples: profile.examples,
+      structure: profile.structure,
+      defaultLength: profile.defaultLength,
+      source: "custom" as const,
+    }));
+
+    return [...BUILT_IN_SCRIPT_VOICES, ...customProfiles];
+  }, [savedScriptVoiceProfiles]);
+  const selectedScriptVoice = useMemo(() => {
+    return scriptVoiceProfiles.find((profile) => profile.id === selectedScriptVoiceId) ?? BUILT_IN_SCRIPT_VOICES[0];
+  }, [scriptVoiceProfiles, selectedScriptVoiceId]);
+  const scriptVoiceOptions = useMemo<Array<SelectOption<string>>>(() => {
+    return scriptVoiceProfiles.map((profile) => ({
+      value: profile.id,
+      label: profile.source === "custom" ? `${profile.name} - Custom` : profile.name,
+    }));
+  }, [scriptVoiceProfiles]);
   const savedFolders = useMemo(() => {
     const folders = Array.from(
       new Set(
@@ -552,6 +716,8 @@ function App() {
     if (!element) {
       return;
     }
+
+    element.classList.add("is-fit-window");
 
     let low = 16;
     let high = 120;
@@ -799,8 +965,12 @@ function App() {
         resetScroll();
       }
 
-      if (event.key.toLowerCase() === "b") {
+      if (event.key.toLowerCase() === "b" || event.key.toLowerCase() === "h") {
         setIsPrompterDockVisible((current) => !current);
+      }
+
+      if (event.key.toLowerCase() === "c") {
+        setIsStageMeterVisible((current) => !current);
       }
 
       if (event.key.toLowerCase() === "v") {
@@ -1006,6 +1176,81 @@ function App() {
     }
   };
 
+  const loadSelectedVoiceIntoForm = () => {
+    setScriptVoiceForm({
+      name: selectedScriptVoice.name,
+      audience: selectedScriptVoice.audience,
+      tone: selectedScriptVoice.tone,
+      pacing: selectedScriptVoice.pacing,
+      bannedWords: selectedScriptVoice.bannedWords,
+      preferredPhrases: selectedScriptVoice.preferredPhrases,
+      examples: selectedScriptVoice.examples,
+      structure: selectedScriptVoice.structure,
+      defaultLength: selectedScriptVoice.defaultLength,
+    });
+    setScriptVoiceMessage(`Loaded "${selectedScriptVoice.name}" into the custom profile editor.`);
+  };
+
+  const clearScriptVoiceForm = () => {
+    setScriptVoiceForm(EMPTY_SCRIPT_VOICE_FORM);
+    setScriptVoiceMessage("Custom profile editor cleared.");
+  };
+
+  const saveCustomScriptVoice = async () => {
+    const name = scriptVoiceForm.name.trim();
+    const tone = scriptVoiceForm.tone.trim();
+
+    if (!name || !tone) {
+      setScriptVoiceMessage("Add a profile name and tone before saving.");
+      return;
+    }
+
+    setIsSavingScriptVoice(true);
+
+    try {
+      const savedId = await saveScriptVoiceProfile({
+        ...scriptVoiceForm,
+        name,
+        tone,
+        updatedAt: Date.now(),
+      });
+
+      if (!savedId) {
+        setScriptVoiceMessage("Add a profile name and tone before saving.");
+        return;
+      }
+
+      setSelectedScriptVoiceId(`custom:${savedId}`);
+      setScriptVoiceMessage(`Saved "${name}" as a custom script voice.`);
+    } finally {
+      setIsSavingScriptVoice(false);
+    }
+  };
+
+  const deleteSelectedScriptVoice = async () => {
+    if (!selectedScriptVoiceId.startsWith("custom:")) {
+      setScriptVoiceMessage("Built-in script voices cannot be deleted.");
+      return;
+    }
+
+    setIsDeletingScriptVoice(true);
+
+    try {
+      const profileId = selectedScriptVoiceId.replace("custom:", "") as Id<"scriptVoiceProfiles">;
+      const didDelete = await deleteScriptVoiceProfile({ profileId });
+
+      if (!didDelete) {
+        setScriptVoiceMessage("That custom script voice was already deleted.");
+        return;
+      }
+
+      setSelectedScriptVoiceId("builtin-waynesutton");
+      setScriptVoiceMessage("Custom script voice deleted.");
+    } finally {
+      setIsDeletingScriptVoice(false);
+    }
+  };
+
   const generateScriptFromAi = async () => {
     const source = draft.trim();
     if (!source) {
@@ -1021,7 +1266,18 @@ function App() {
         input: source,
         provider: aiProvider,
         modelOverride: aiModelOverride.trim() || undefined,
-        length: aiLength,
+        length: aiLength === "open" && selectedScriptVoice.defaultLength !== "open" ? selectedScriptVoice.defaultLength : aiLength,
+        scriptVoiceProfile: {
+          name: selectedScriptVoice.name,
+          audience: selectedScriptVoice.audience,
+          tone: selectedScriptVoice.tone,
+          pacing: selectedScriptVoice.pacing,
+          bannedWords: selectedScriptVoice.bannedWords,
+          preferredPhrases: selectedScriptVoice.preferredPhrases,
+          examples: selectedScriptVoice.examples,
+          structure: selectedScriptVoice.structure,
+          defaultLength: selectedScriptVoice.defaultLength,
+        },
         instructions: aiInstructions.trim() || undefined,
       });
 
@@ -1232,6 +1488,19 @@ function App() {
       className={activeTab === "prompter" ? "bottom-tabs is-prompter" : "bottom-tabs"}
       aria-label="Teleprompter tabs"
     >
+      {activeTab === "prompter" ? (
+        <button
+          className={isPrompterDockVisible ? "tab-dock-toggle has-tooltip" : "tab-dock-toggle has-tooltip is-active"}
+          type="button"
+          onClick={() => setIsPrompterDockVisible((current) => !current)}
+          aria-pressed={!isPrompterDockVisible}
+          aria-label={isPrompterDockVisible ? "Hide Tab 1 control bar" : "Show Tab 1 control bar"}
+          title={isPrompterDockVisible ? "Hide Tab 1 control bar" : "Show Tab 1 control bar"}
+          data-tooltip={isPrompterDockVisible ? "Hide bar" : "Show bar"}
+        >
+          <Layout size={17} weight="bold" />
+        </button>
+      ) : null}
       <div className="tab-list">
         <button
           className={activeTab === "prompter" ? "tab has-tooltip is-active" : "tab has-tooltip"}
@@ -1577,18 +1846,7 @@ function App() {
               </div>
             </div>
           ) : null}
-          <button
-            className={isPrompterDockVisible ? "dock-toggle-button has-tooltip" : "dock-toggle-button has-tooltip is-hidden-state"}
-            type="button"
-            onClick={() => setIsPrompterDockVisible((current) => !current)}
-            aria-pressed={!isPrompterDockVisible}
-            aria-label={isPrompterDockVisible ? "Hide Tab 1 control bar" : "Show Tab 1 control bar"}
-            title={isPrompterDockVisible ? "Hide Tab 1 control bar" : "Show Tab 1 control bar"}
-            data-tooltip={isPrompterDockVisible ? "Hide bar" : "Show bar"}
-          >
-            <SquareHalfBottom size={18} weight="bold" />
-          </button>
-          {isPrompterDockVisible ? tabs : null}
+          {tabs}
         </section>
       ) : activeTab === "script" ? (
         <>
@@ -1860,6 +2118,24 @@ function App() {
       ) : (
         <>
           <section className="settings-view" aria-label="Help and settings">
+            <section className="settings-panel app-docs-panel" aria-label="App documentation">
+              <div>
+                <p className="eyebrow">App docs</p>
+                <h1>How Teleprompt works.</h1>
+              </div>
+              <p className="about-copy">
+                Teleprompt has three main areas: read on Tab 1, write and generate on Tab 2, then tune defaults and learn shortcuts on Tab 3.
+                Script Voice Profiles control writing tone for AI-generated scripts. Narration voice is separate and only applies to audio features.
+              </p>
+              <div className="docs-grid">
+                {APP_DOCS.map(([title, copy]) => (
+                  <article className="docs-card" key={title}>
+                    <h2>{title}</h2>
+                    <p>{copy}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
             <div className="editor-header">
               <div>
                 <p className="eyebrow">Help and defaults</p>
@@ -2135,6 +2411,25 @@ function App() {
                   onChange={setAiLength}
                 />
               </div>
+              <div className="field-control ai-modal-wide">
+                <span>Script voice</span>
+                <CustomSelect
+                  ariaLabel="Script voice profile"
+                  value={selectedScriptVoiceId}
+                  options={scriptVoiceOptions}
+                  onChange={(value) => {
+                    setSelectedScriptVoiceId(value);
+                    setScriptVoiceMessage(null);
+                  }}
+                />
+              </div>
+              <div className="voice-summary ai-modal-wide">
+                <div>
+                  <p className="eyebrow">Selected writing tone</p>
+                  <h3>{selectedScriptVoice.name}</h3>
+                </div>
+                <p>{selectedScriptVoice.tone}</p>
+              </div>
               <label className="field-control ai-modal-wide" htmlFor="ai-model">
                 <span>Model override</span>
                 <input
@@ -2161,6 +2456,134 @@ function App() {
                   placeholder="Example: Make it direct, practical, and easy to read on camera."
                 />
               </label>
+              <section className="voice-profile-editor ai-modal-wide" aria-label="Custom script voice profile editor">
+                <div className="voice-profile-header">
+                  <div>
+                    <p className="eyebrow">Custom script voice</p>
+                    <h3>Save a reusable writing tone</h3>
+                  </div>
+                  <div className="voice-profile-actions">
+                    <button className="tool-button" type="button" onClick={loadSelectedVoiceIntoForm}>
+                      Load Selected
+                    </button>
+                    <button className="tool-button" type="button" onClick={clearScriptVoiceForm}>
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div className="voice-profile-grid">
+                  <label className="field-control" htmlFor="voice-profile-name">
+                    <span>Name</span>
+                    <input
+                      id="voice-profile-name"
+                      type="text"
+                      value={scriptVoiceForm.name}
+                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="WayneSutton.ai"
+                    />
+                  </label>
+                  <label className="field-control" htmlFor="voice-profile-audience">
+                    <span>Audience</span>
+                    <input
+                      id="voice-profile-audience"
+                      type="text"
+                      value={scriptVoiceForm.audience}
+                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, audience: event.target.value }))}
+                      placeholder="Founders, creators, operators"
+                    />
+                  </label>
+                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-tone">
+                    <span>Tone</span>
+                    <textarea
+                      id="voice-profile-tone"
+                      className="modal-textarea is-compact"
+                      value={scriptVoiceForm.tone}
+                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, tone: event.target.value }))}
+                      placeholder="Direct, practical, strong point of view, no hype."
+                    />
+                  </label>
+                  <label className="field-control" htmlFor="voice-profile-pacing">
+                    <span>Pacing</span>
+                    <input
+                      id="voice-profile-pacing"
+                      type="text"
+                      value={scriptVoiceForm.pacing}
+                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, pacing: event.target.value }))}
+                      placeholder="Short spoken sentences"
+                    />
+                  </label>
+                  <div className="field-control">
+                    <span>Default length</span>
+                    <CustomSelect
+                      ariaLabel="Profile default length"
+                      value={scriptVoiceForm.defaultLength}
+                      options={AI_LENGTH_OPTIONS}
+                      onChange={(value) => setScriptVoiceForm((current) => ({ ...current, defaultLength: value }))}
+                    />
+                  </div>
+                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-banned">
+                    <span>Banned words</span>
+                    <input
+                      id="voice-profile-banned"
+                      type="text"
+                      value={scriptVoiceForm.bannedWords}
+                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, bannedWords: event.target.value }))}
+                      placeholder="No hype, no generic AI phrases"
+                    />
+                  </label>
+                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-preferred">
+                    <span>Preferred phrases</span>
+                    <input
+                      id="voice-profile-preferred"
+                      type="text"
+                      value={scriptVoiceForm.preferredPhrases}
+                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, preferredPhrases: event.target.value }))}
+                      placeholder="Use practical next steps and specific examples"
+                    />
+                  </label>
+                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-structure">
+                    <span>Structure</span>
+                    <input
+                      id="voice-profile-structure"
+                      type="text"
+                      value={scriptVoiceForm.structure}
+                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, structure: event.target.value }))}
+                      placeholder="Hook, context, recommendation, close"
+                    />
+                  </label>
+                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-examples">
+                    <span>Examples / import markdown</span>
+                    <textarea
+                      id="voice-profile-examples"
+                      className="modal-textarea"
+                      value={scriptVoiceForm.examples}
+                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, examples: event.target.value }))}
+                      placeholder="Paste sample lines, markdown notes, or a style guide here."
+                    />
+                  </label>
+                </div>
+                {scriptVoiceMessage ? <p className="library-message modal-message">{scriptVoiceMessage}</p> : null}
+                <div className="voice-profile-actions is-footer">
+                  <button
+                    className="save-button"
+                    type="button"
+                    onClick={saveCustomScriptVoice}
+                    disabled={isSavingScriptVoice}
+                  >
+                    <FloppyDisk size={17} weight="bold" />
+                    {isSavingScriptVoice ? "Saving" : "Save Voice"}
+                  </button>
+                  <button
+                    className="danger-button"
+                    type="button"
+                    onClick={deleteSelectedScriptVoice}
+                    disabled={!selectedScriptVoiceId.startsWith("custom:") || isDeletingScriptVoice}
+                  >
+                    <Trash size={17} weight="bold" />
+                    {isDeletingScriptVoice ? "Deleting" : "Delete Voice"}
+                  </button>
+                </div>
+              </section>
             </div>
             {aiMessage ? <p className="library-message modal-message">{aiMessage}</p> : null}
             <div className="modal-actions">

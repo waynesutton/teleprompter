@@ -3,17 +3,22 @@
 - `package.json` - Project scripts and dependencies for the Vite, React, TypeScript, Convex, static hosting, Phosphor Icons, Graphite fonts, and accessible font app.
 - `package-lock.json` - npm dependency lockfile.
 - `.env.example` - Example environment file showing the required Convex URL variable.
-- `index.html` - Vite HTML entry file.
+- `index.html` - Vite HTML entry file with SEO, AEO, GEO, Open Graph, Twitter card, favicon, canonical, sitemap, and JSON-LD metadata.
+- `public/favicon.svg` - Custom SVG favicon for Teleprompt.
+- `public/social-card.svg` - Large 1200x630 SVG share image for Open Graph and Twitter cards.
+- `public/robots.txt` - Search crawler policy that allows indexing and points to the sitemap.
+- `public/sitemap.xml` - Sitemap for the hosted app root.
 - `vite.config.ts` - Vite React configuration.
 - `eslint.config.js` - ESLint configuration for TypeScript and React hooks.
 - `tsconfig.json` - TypeScript configuration for app and Convex code.
 - `src/main.tsx` - React entry point, Convex provider setup, and bundled Inter, Inter Tight, JetBrains Mono, Lexend, and OpenDyslexic font imports.
-- `src/App.tsx` - Three-tab teleprompter experience with Phosphor icons, prompting, optional RSVP/ORP reading mode, keyboard tab switching, Tab 1 dock visibility toggle, Gear menu secondary options, app-driven script undo, script editing and preview, Graphite styled selectors, AI script generation and RSVP rewrite controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, shared script save/load/delete, default settings, counter visibility, keyboard shortcuts, shortcut help modal, Tab 3 About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
-- `src/styles.css` - Graphite-inspired responsive interface styles, including shared control tokens, RSVP word and pivot rendering, custom selectors with upward placement support, compact one-row desktop prompter dock, Tab 1 Gear menu, raised dock toggle, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator controls, shortcut modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, shortcut, About table, and wrapping shared library controls.
+- `src/App.tsx` - Three-tab teleprompter experience with Phosphor icons, prompting, optional RSVP/ORP reading mode, keyboard tab switching, Tab 1 Layout hide/show control, countdown counter shortcut, fit-to-window measurement, Gear menu secondary options, app-driven script undo, script editing and preview, Graphite styled selectors, AI script generation with built-in and custom Script Voice Profiles, RSVP rewrite controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, shared script save/load/delete, default settings, counter visibility, keyboard shortcuts, shortcut help modal, Tab 3 app docs and About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
+- `src/styles.css` - Graphite-inspired responsive interface styles, including shared control tokens, true teleprompter end-scroll padding, RSVP word and pivot rendering, custom selectors with upward placement support, compact one-row desktop prompter dock spacing, Tab 1 Gear menu, Tab 1 Layout hide/show tab control, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator and Script Voice Profile controls, shortcut modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, app docs cards, shortcut, About table, and wrapping shared library controls.
 - `src/vite-env.d.ts` - Vite environment type references.
-- `convex/schema.ts` - Convex schema for saved local prompt state, shared default settings, Graphite font and dark grey color selection, and folder-aware shared saved scripts.
+- `convex/schema.ts` - Convex schema for saved local prompt state, shared default settings, Graphite font and dark grey color selection, folder-aware shared saved scripts, and custom Script Voice Profiles.
 - `convex/teleprompter.ts` - Convex queries and mutations for current prompt state, shared default settings, Graphite font and dark grey color validation, and folder-aware shared saved script save/delete.
-- `convex/aiScripts.ts` - Convex actions for AI provider setup status, script generation with OpenAI, Claude, OpenRouter, Firecrawl URL scraping, and optional RSVP script rewriting.
+- `convex/aiScripts.ts` - Convex actions for AI provider setup status, Script Voice Profile-aware script generation with OpenAI, Claude, OpenRouter, Firecrawl URL scraping, and optional RSVP script rewriting.
+- `convex/scriptVoices.ts` - Convex queries and mutations for listing, saving, updating, and deleting custom Script Voice Profiles.
 - `convex/voice.ts` - Convex action for checking whether `ELEVENLABS_API_KEY` is configured without exposing the key.
 - `convex/convex.config.ts` - Convex component registration, including static hosting.
 - `convex/staticHosting.ts` - Internal upload functions and deployment query for Convex static hosting.
@@ -38,5 +43,10 @@
 - `prds/tab-one-dock-toggle-and-ui-overflow-fixes.md` - Product requirements for the Tab 1 speed menu direction, dock toggle, and Tab 2 library overflow fixes.
 - `prds/rsvp-reading-mode.md` - Product requirements for optional Tab 1 RSVP/ORP reading mode and AI rewrite support.
 - `prds/tab-one-compact-options-menu.md` - Product requirements for the Tab 1 Gear menu, raised dock toggle, and RSVP About copy placement.
+- `prds/tab-one-tabbar-layout-toggle.md` - Product requirements for the Tab 1 Layout hide/show control beside the Prompter tab.
+- `prds/prompter-vertical-spacing-and-counter-shortcut.md` - Product requirements for Tab 1 vertical spacing and countdown counter shortcut updates.
+- `prds/true-teleprompter-end-scroll.md` - Product requirements for true Tab 1 end-scroll behavior.
+- `prds/script-voice-profiles.md` - Product requirements for built-in and Convex-backed custom Script Voice Profiles.
+- `prds/app-metadata-and-readme-refresh.md` - Product requirements for public app metadata, social assets, and README refresh.
 - `changelog.md` - Project changelog.
 - `task.md` - Completed task log.

@@ -73,6 +73,41 @@ button {
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
 }
 
+.tab-dock-toggle {
+  display: inline-flex;
+  width: 46px;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--control-border);
+  border-radius: 14px;
+  background: var(--graphite-surface);
+  color: var(--graphite-primary);
+  cursor: pointer;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+
+.tab-dock-toggle:hover {
+  border-color: var(--control-border-strong);
+  background: var(--control-hover);
+}
+
+.tab-dock-toggle:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.tab-dock-toggle.is-active {
+  border-color: var(--graphite-accent);
+  background: var(--graphite-accent);
+  color: var(--graphite-on-accent);
+}
+
 .tab {
   display: inline-flex;
   align-items: center;
@@ -175,7 +210,7 @@ button {
   position: absolute;
   inset: 0;
   overflow: auto;
-  padding: clamp(86px, 14vh, 150px) clamp(24px, 8vw, 128px) 44vh;
+  padding: clamp(86px, 14vh, 150px) clamp(24px, 8vw, 128px) 112vh;
   color: #fff;
   line-height: 1.14;
   font-weight: 750;
@@ -342,11 +377,11 @@ button {
   position: absolute;
   z-index: 4;
   left: 50%;
-  bottom: 64px;
+  bottom: 78px;
   width: min(1540px, calc(100vw - 22px));
   transform: translateX(-50%);
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .prompter-stage.is-dock-hidden .script-reader {
@@ -386,45 +421,6 @@ button {
 .view-cluster,
 .display-cluster {
   flex: 0 0 auto;
-}
-
-.dock-toggle-button {
-  position: fixed;
-  z-index: 9;
-  right: 16px;
-  bottom: 132px;
-  display: inline-flex;
-  width: 42px;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--control-border);
-  border-radius: 10px;
-  background: var(--graphite-surface);
-  color: var(--graphite-primary);
-  cursor: pointer;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.52);
-  transition:
-    background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    transform var(--motion-fast) ease;
-}
-
-.dock-toggle-button:hover {
-  border-color: var(--control-border-strong);
-  background: var(--control-hover);
-}
-
-.dock-toggle-button:active {
-  transform: translateY(1px) scale(0.99);
-}
-
-.dock-toggle-button.is-hidden-state {
-  bottom: 16px;
-  border-color: var(--graphite-accent);
-  background: var(--graphite-accent);
-  color: var(--graphite-on-accent);
 }
 
 .gear-menu-wrap {
@@ -488,6 +484,10 @@ button {
   left: 50%;
   bottom: 16px;
   transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .bottom-tabs.is-prompter {
@@ -752,6 +752,45 @@ input[type="range"]::-moz-range-thumb {
   width: min(1160px, calc(100vw - 32px));
   margin: 0 auto;
   padding: 46px 0 104px;
+}
+
+.app-docs-panel {
+  margin-bottom: 18px;
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.docs-card {
+  display: grid;
+  gap: 8px;
+  min-height: 132px;
+  padding: 14px;
+  border: 1px solid var(--quiet-white);
+  border-radius: 12px;
+  background: var(--soft-black);
+}
+
+.docs-card h2,
+.voice-summary h3,
+.voice-profile-header h3 {
+  margin: 0;
+  color: var(--graphite-primary);
+  font-family: "Inter Tight", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.docs-card p {
+  margin: 0;
+  color: var(--graphite-secondary);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .editor-header {
@@ -1214,7 +1253,7 @@ kbd {
 }
 
 .ai-modal {
-  width: min(640px, calc(100vw - 28px));
+  width: min(780px, calc(100vw - 28px));
 }
 
 .ai-modal-grid {
@@ -1235,6 +1274,50 @@ kbd {
   border-radius: 10px;
   font-size: 15px;
   line-height: 1.5;
+}
+
+.modal-textarea.is-compact {
+  min-height: 82px;
+}
+
+.voice-summary,
+.voice-profile-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--quiet-white);
+  border-radius: 12px;
+  background: var(--soft-black);
+}
+
+.voice-summary p {
+  margin: 0;
+  color: var(--graphite-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.voice-profile-header,
+.voice-profile-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.voice-profile-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.voice-profile-actions.is-footer {
+  padding-top: 2px;
+}
+
+.voice-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .modal-message {
@@ -1470,7 +1553,7 @@ button:disabled:hover,
 .fit-button:focus-visible,
 .save-button:focus-visible,
 .danger-button:focus-visible,
-.dock-toggle-button:focus-visible,
+.tab-dock-toggle:focus-visible,
 .meter-close:focus-visible,
 .segment:focus-visible,
 .tool-button:focus-visible,
@@ -1508,7 +1591,14 @@ textarea:focus-visible {
     width: min(560px, calc(100vw - 24px));
   }
 
+  .tab-dock-toggle {
+    width: 44px;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
   .tab-list {
+    flex: 1 1 auto;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     border-radius: 8px;
@@ -1527,7 +1617,7 @@ textarea:focus-visible {
   }
 
   .script-reader {
-    padding: 86px 20px 58vh;
+    padding: 86px 20px 112vh;
   }
 
   .script-reader.is-fit-window {
@@ -1658,6 +1748,24 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .docs-grid,
+  .voice-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .voice-profile-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .voice-profile-actions {
+    justify-content: stretch;
+  }
+
+  .voice-profile-actions button {
+    flex: 1 1 150px;
+  }
+
   .modal-actions button {
     flex: 1 1 140px;
   }
@@ -1666,7 +1774,7 @@ textarea:focus-visible {
 @media (max-height: 640px) and (min-width: 760px) {
   .script-reader {
     padding-top: 72px;
-    padding-bottom: 210px;
+    padding-bottom: 108vh;
   }
 
   .script-reader.is-fit-window {
@@ -1674,9 +1782,9 @@ textarea:focus-visible {
   }
 
   .prompter-bottom-stack {
-    bottom: 66px;
+    bottom: 74px;
     width: min(1160px, calc(100vw - 20px));
-    gap: 8px;
+    gap: 10px;
   }
 
   .control-deck {

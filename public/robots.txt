@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fearless-dolphin-422.convex.site/sitemap.xml

@@ -4,6 +4,11 @@
 
 ## completed
 
+- [x] 2026-05-31 19:04 UTC - Added app favicon, social thumbnail, metadata, structured data, robots policy, sitemap, and refreshed README. PRD: `prds/app-metadata-and-readme-refresh.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and static hosting deploy.
+- [x] 2026-05-31 14:33 UTC - Added built-in and saved Script Voice Profiles, wired them into the AI generator, and added Tab 3 app docs. PRD: `prds/script-voice-profiles.md`. Verified with `npx convex dev --once`, `npm run typecheck`, `npm run lint`, and `npm run build`.
+- [x] 2026-05-31 06:53 UTC - Made Tab 1 scroll mode allow final script text to pass the guide and leave the visible area. PRD: `prds/true-teleprompter-end-scroll.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and static hosting deploy.
+- [x] 2026-05-31 06:49 UTC - Added balanced Tab 1 spacing between counter, main bar, and tabs plus a counter visibility shortcut. PRD: `prds/prompter-vertical-spacing-and-counter-shortcut.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and static hosting deploy.
+- [x] 2026-05-31 06:41 UTC - Moved Tab 1 hide/show into a Layout icon beside the Tab 1 tab and kept shortcuts active while hidden. PRD: `prds/tab-one-tabbar-layout-toggle.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and static hosting deploy.
 - [x] 2026-05-31 06:31 UTC - Compacted Tab 1 secondary controls into a Gear menu, lifted the dock toggle, and folded RSVP help into About features. PRD: `prds/tab-one-compact-options-menu.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and static hosting deploy.
 - [x] 2026-05-31 06:15 UTC - Added optional Tab 1 RSVP/ORP reading mode with non-AI playback, AI rewrite support, and voice-compatible controls. PRD: `prds/rsvp-reading-mode.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, `npx convex dev --once`, and static hosting deploy.
 - [x] 2026-05-31 06:05 UTC - Fixed Tab 1 speed menu direction, added a bottom-right dock toggle, and tightened Tab 2 library wrapping. PRD: `prds/tab-one-dock-toggle-and-ui-overflow-fixes.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and static hosting deploy.
