@@ -2,6 +2,7 @@ import { type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, us
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import {
+  Archive,
   ArrowCounterClockwise,
   Article,
   CaretDown,
@@ -29,12 +30,13 @@ import {
   Sparkle,
   TextAlignCenter,
   Trash,
+  VideoCamera,
   X,
 } from "@phosphor-icons/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
 
-type PromptTab = "prompter" | "script" | "help";
+type PromptTab = "prompter" | "script" | "build" | "help";
 type TextColor = "white" | "red" | "yellow" | "grey" | "darkgrey";
 type PromptFont = "system" | "graphite" | "lexend" | "opendyslexic";
 type LayoutMode = "left" | "centered";
@@ -68,7 +70,7 @@ type VoiceStatus = {
   provider: string;
 };
 
-type UserApiKeyService = "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs";
+type UserApiKeyService = "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "mux" | "heygen";
 
 type UserApiKeyStatus = {
   isAuthenticated: boolean;
@@ -79,6 +81,24 @@ type UserApiKeyStatus = {
     siteUrl: string | null;
     appName: string | null;
   }>;
+};
+
+type BuildItemKind = "script" | "video" | "both";
+type BuildItemStatus = "active" | "archived";
+type BuildSourceType = "prompt" | "link" | "doc" | "script" | "mixed";
+type BuildItem = {
+  _id: Id<"buildItems">;
+  kind: BuildItemKind;
+  status: BuildItemStatus;
+  sourceType: BuildSourceType;
+  title: string;
+  sourceText?: string;
+  scriptSnapshot?: string;
+  videoBrief?: string;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+  archivedAt?: number;
 };
 
 type PromptSettings = {
@@ -211,7 +231,95 @@ const API_KEY_SERVICE_OPTIONS: Array<SelectOption<UserApiKeyService>> = [
   { value: "openrouter", label: "OpenRouter" },
   { value: "firecrawl", label: "Firecrawl" },
   { value: "elevenlabs", label: "ElevenLabs" },
+  { value: "mux", label: "Mux" },
+  { value: "heygen", label: "HeyGen" },
 ];
+const BUILD_KIND_OPTIONS: Array<SelectOption<BuildItemKind>> = [
+  { value: "script", label: "Script" },
+  { value: "video", label: "Video" },
+  { value: "both", label: "Script + Video" },
+];
+const BUILD_SOURCE_OPTIONS: Array<SelectOption<BuildSourceType>> = [
+  { value: "script", label: "Current script" },
+  { value: "prompt", label: "Prompt" },
+  { value: "link", label: "Link" },
+  { value: "doc", label: "Doc" },
+  { value: "mixed", label: "Mixed" },
+];
+const BUILD_STATUS_OPTIONS: Array<SelectOption<BuildItemStatus | "all">> = [
+  { value: "active", label: "Active" },
+  { value: "archived", label: "Archived" },
+  { value: "all", label: "All" },
+];
+const EMPTY_BUILD_FORM = {
+  kind: "both" as BuildItemKind,
+  sourceType: "script" as BuildSourceType,
+  title: "",
+  sourceText: "",
+  scriptSnapshot: "",
+  videoBrief: "",
+  notes: "",
+};
+const MODEL_KEY_SERVICES = new Set<UserApiKeyService>(["openai", "claude", "openrouter", "mux"]);
+const SITE_APP_KEY_SERVICES = new Set<UserApiKeyService>(["openrouter", "mux"]);
+const API_KEY_HELP: Record<UserApiKeyService, { keyLabel: string; modelLabel: string; modelPlaceholder: string; siteLabel: string; appLabel: string; help: string }> = {
+  openai: {
+    keyLabel: "API key",
+    modelLabel: "Model",
+    modelPlaceholder: "gpt-4.1-mini",
+    siteLabel: "Site URL",
+    appLabel: "App name",
+    help: "Used for script generation and RSVP rewrites.",
+  },
+  claude: {
+    keyLabel: "API key",
+    modelLabel: "Model",
+    modelPlaceholder: "claude-3-5-sonnet-latest",
+    siteLabel: "Site URL",
+    appLabel: "App name",
+    help: "Used for script generation and RSVP rewrites.",
+  },
+  openrouter: {
+    keyLabel: "API key",
+    modelLabel: "Model",
+    modelPlaceholder: "openai/gpt-4.1-mini",
+    siteLabel: "Site URL",
+    appLabel: "App name",
+    help: "Used for model routing when you prefer OpenRouter.",
+  },
+  firecrawl: {
+    keyLabel: "API key",
+    modelLabel: "Model",
+    modelPlaceholder: "",
+    siteLabel: "Site URL",
+    appLabel: "App name",
+    help: "Used to scrape the first URL or markdown link before generation.",
+  },
+  elevenlabs: {
+    keyLabel: "API key",
+    modelLabel: "Model",
+    modelPlaceholder: "",
+    siteLabel: "Site URL",
+    appLabel: "App name",
+    help: "Used for narration voice features when voice mode is enabled.",
+  },
+  mux: {
+    keyLabel: "Token secret",
+    modelLabel: "Token ID",
+    modelPlaceholder: "Mux token ID",
+    siteLabel: "Webhook signing secret",
+    appLabel: "Playback domain",
+    help: "Use Mux for video uploads, playback IDs, webhook sync, and delivery.",
+  },
+  heygen: {
+    keyLabel: "API key",
+    modelLabel: "Model",
+    modelPlaceholder: "",
+    siteLabel: "Site URL",
+    appLabel: "App name",
+    help: "Optional narration/avatar provider. HyperFrames itself renders locally or on workers.",
+  },
+};
 const BUILT_IN_SCRIPT_VOICES: ScriptVoiceProfile[] = [
   {
     id: "builtin-natural",
@@ -315,23 +423,41 @@ const ABOUT_FEATURES = [
 ] as const;
 
 const APP_DOCS = [
-  ["Tab 1 Prompter", "Read the current script live. Use Start, speed, page controls, fit, guide, mirror, RSVP, and the hide-bar control for recording."],
+  ["Prompter", "Read the current script live. Use Start, speed, page controls, fit, guide, mirror, RSVP, and the hide-bar control for recording."],
   ["Mini View", "Use the monitor icon on Tab 1 to open a compact movable prompter. It follows the active page, scroll/RSVP mode, playback state, and keyboard shortcuts."],
-  ["Tab 2 Script", "Write or paste the source script, preview formatting, add page breaks, save scripts into folders, and generate scripts when AI is configured."],
-  ["Tab 3 Help", "Set defaults, review shortcuts, read app docs, and check the open source feature list."],
+  ["Script", "Write or paste the source script, preview formatting, add page breaks, save scripts into folders, and export markdown."],
+  ["Build", "Generate scripts, manage BYOK provider setup, and plan video builds from links, docs, scripts, or prompts after signing in."],
+  ["Help", "Set defaults, review shortcuts, read app docs, and check the open source feature list."],
   ["Script Voice Profiles", "Choose a writing tone for AI-generated scripts. Built-in profiles work immediately, and custom profiles can be saved, edited, deleted, or imported from notes."],
-  ["Narration Voice", "Audio narration is separate from script writing tone. It only becomes usable when the site owner configures the ElevenLabs key."],
+  ["Narration Voice", "Audio narration is separate from script writing tone. It only becomes usable when your ElevenLabs key is saved."],
   ["RSVP Mode", "Switch Tab 1 to RSVP to show one word at a time with a red ORP pivot letter. AI is optional and only helps rewrite scripts for easier RSVP reading."],
-  ["Saving", "Generated text replaces the editor draft, but it is not saved to the shared library until you click a save control."],
+  ["Saving", "Generated text replaces the editor draft, but it is not saved to your library until you click a save control."],
+] as const;
+
+const VIDEO_WORKFLOW_STEPS = [
+  ["1. Gather", "Start from a link, markdown doc, pasted notes, saved script, or prompt. Firecrawl handles URL context when your key is saved."],
+  ["2. Shape", "Use Script Voice Profiles to turn source material into a spoken script, outline, shot list, and caption-ready beats."],
+  ["3. Compose", "Use HyperFrames for deterministic HTML-to-video compositions, or Remotion when you need React-based rendering and cloud workers."],
+  ["4. Store", "Use R2 for large render artifacts and Mux for upload, playback IDs, webhooks, thumbnails, and delivery."],
+  ["5. Review", "Track jobs in Convex, show status in real time, then send the finished script back to Prompter or save the video result."],
+] as const;
+
+const VIDEO_PROVIDER_GUIDE = [
+  ["Mux", "Video asset management, playback, direct uploads, webhooks, and streaming delivery. Use the Convex Mux component."],
+  ["HyperFrames", "Agent-authored HTML videos from links, docs, scripts, and prompts. Render with CLI/workers, not inside Convex actions."],
+  ["Remotion", "React-based video templates and cloud rendering on Lambda or Cloud Run."],
+  ["Cloudflare R2", "Large render outputs, frame bundles, source captures, and downloads before sending final assets to Mux."],
+  ["HeyGen", "Optional avatar or narration workflows. Keep it separate from the script-writing voice."],
 ] as const;
 
 const SHORTCUTS = [
   ["Space", "Start or pause"],
   ["S or Escape", "Stop and return to the top"],
   ["Command/Ctrl + ?", "Open keyboard shortcuts"],
-  ["Command/Ctrl + 1", "Open Tab 1 Prompter"],
-  ["Command/Ctrl + 2", "Open Tab 2 Script"],
-  ["Command/Ctrl + 3", "Open Tab 3 Help"],
+  ["Command/Ctrl + 1", "Open Prompter"],
+  ["Command/Ctrl + 2", "Open Script"],
+  ["Command/Ctrl + 3", "Open Build"],
+  ["Command/Ctrl + 4", "Open Help"],
   ["Command/Ctrl + Z", "Undo the last script tool change on Tab 2"],
   ["M", "Open or focus the mini prompter view"],
   ["H or B", "Show or hide the Tab 1 control bar"],
@@ -610,6 +736,8 @@ function App() {
   const savedDefaultSettings = useQuery(api.teleprompter.getDefaultSettings);
   const savedScriptsQuery = useQuery(api.teleprompter.listSavedScripts);
   const savedScriptVoiceProfilesQuery = useQuery(api.scriptVoices.list);
+  const [buildStatusFilter, setBuildStatusFilter] = useState<BuildItemStatus | "all">("active");
+  const buildItemsQuery = useQuery(api.buildItems.list, { status: "all" }) as BuildItem[] | undefined;
   const viewer = useQuery(api.users.getViewer);
   const apiKeyStatus = useQuery(api.userApiKeys.getStatus) as UserApiKeyStatus | undefined;
   const getAiProviderStatus = useAction(api.aiScripts.getAiProviderStatus);
@@ -620,6 +748,9 @@ function App() {
   const saveSharedScript = useMutation(api.teleprompter.saveSharedScript);
   const saveDefaultSettings = useMutation(api.teleprompter.saveDefaultSettings);
   const deleteSharedScript = useMutation(api.teleprompter.deleteSharedScript);
+  const saveBuildItem = useMutation(api.buildItems.save);
+  const setBuildItemStatus = useMutation(api.buildItems.setStatus);
+  const deleteBuildItem = useMutation(api.buildItems.remove);
   const removeUserApiKey = useMutation(api.userApiKeys.remove);
   const saveScriptVoiceProfile = useMutation(api.scriptVoices.save);
   const deleteScriptVoiceProfile = useMutation(api.scriptVoices.remove);
@@ -674,6 +805,12 @@ function App() {
   const [apiKeyMessage, setApiKeyMessage] = useState<string | null>(null);
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [isRemovingApiKey, setIsRemovingApiKey] = useState(false);
+  const [buildForm, setBuildForm] = useState(EMPTY_BUILD_FORM);
+  const [editingBuildItemId, setEditingBuildItemId] = useState<Id<"buildItems"> | null>(null);
+  const [buildMessage, setBuildMessage] = useState<string | null>(null);
+  const [isSavingBuildItem, setIsSavingBuildItem] = useState(false);
+  const [isUpdatingBuildItem, setIsUpdatingBuildItem] = useState(false);
+  const [buildPendingDeleteId, setBuildPendingDeleteId] = useState<Id<"buildItems"> | null>(null);
   const [aiModelOverride, setAiModelOverride] = useState("");
   const [aiInstructions, setAiInstructions] = useState("");
   const [aiMessage, setAiMessage] = useState<string | null>(null);
@@ -695,6 +832,20 @@ function App() {
   const rsvpCarryMsRef = useRef(0);
   const savedScripts = useMemo(() => savedScriptsQuery ?? [], [savedScriptsQuery]);
   const savedScriptVoiceProfiles = useMemo(() => savedScriptVoiceProfilesQuery ?? [], [savedScriptVoiceProfilesQuery]);
+  const buildItems = useMemo(() => buildItemsQuery ?? [], [buildItemsQuery]);
+  const visibleBuildItems = useMemo(() => {
+    if (buildStatusFilter === "all") {
+      return buildItems;
+    }
+
+    return buildItems.filter((item) => item.status === buildStatusFilter);
+  }, [buildItems, buildStatusFilter]);
+  const buildPendingDeleteItem = useMemo(
+    () => visibleBuildItems.find((item) => item._id === buildPendingDeleteId) ?? buildItems.find((item) => item._id === buildPendingDeleteId),
+    [buildItems, buildPendingDeleteId, visibleBuildItems],
+  );
+  const activeBuildCount = useMemo(() => buildItems.filter((item) => item.status === "active").length, [buildItems]);
+  const archivedBuildCount = useMemo(() => buildItems.filter((item) => item.status === "archived").length, [buildItems]);
   const scriptVoiceProfiles = useMemo<ScriptVoiceProfile[]>(() => {
     const customProfiles = savedScriptVoiceProfiles.map((profile) => ({
       id: `custom:${profile._id}`,
@@ -1187,7 +1338,8 @@ function App() {
         const tabShortcuts: Record<string, PromptTab> = {
           "1": "prompter",
           "2": "script",
-          "3": "help",
+          "3": "build",
+          "4": "help",
         };
         const nextTab = tabShortcuts[event.key];
 
@@ -1428,8 +1580,8 @@ function App() {
       if (nextStatus.providers.length === 0 || (hasUrl && !nextStatus.hasFirecrawl)) {
         setAiSetupMessage(
           hasUrl && !nextStatus.hasFirecrawl
-            ? "Add your Firecrawl API key in Script generator settings before generating from a URL."
-            : "Add an OpenAI, Claude, or OpenRouter API key in Script generator settings.",
+            ? "Add your Firecrawl API key in Build settings before generating from a URL."
+            : "Add an OpenAI, Claude, or OpenRouter API key in Build settings.",
         );
         setIsAiSetupModalOpen(true);
         return;
@@ -1513,6 +1665,133 @@ function App() {
     } finally {
       setIsRemovingApiKey(false);
     }
+  };
+
+  const clearBuildForm = () => {
+    setBuildForm(EMPTY_BUILD_FORM);
+    setEditingBuildItemId(null);
+    setBuildMessage("Build form cleared.");
+  };
+
+  const seedBuildFromCurrentScript = () => {
+    const nextTitle = scriptTitle.trim() || getDefaultScriptTitle(draft);
+    setBuildForm((current) => ({
+      ...current,
+      kind: current.kind === "video" ? "both" : current.kind,
+      sourceType: "script",
+      title: nextTitle,
+      scriptSnapshot: draft,
+      sourceText: current.sourceText || nextTitle,
+    }));
+    setBuildMessage("Current script added to the Build form.");
+  };
+
+  const editBuildItem = (item: BuildItem) => {
+    setBuildForm({
+      kind: item.kind,
+      sourceType: item.sourceType,
+      title: item.title,
+      sourceText: item.sourceText ?? "",
+      scriptSnapshot: item.scriptSnapshot ?? "",
+      videoBrief: item.videoBrief ?? "",
+      notes: item.notes ?? "",
+    });
+    setEditingBuildItemId(item._id);
+    setBuildMessage(`Editing "${item.title}".`);
+  };
+
+  const saveCurrentBuildItem = async () => {
+    if (!requireLogin("Sign in with GitHub to save Build items.")) {
+      return;
+    }
+
+    const title = buildForm.title.trim() || scriptTitle.trim() || getDefaultScriptTitle(draft);
+    const scriptSnapshot = buildForm.kind === "video" ? buildForm.scriptSnapshot : buildForm.scriptSnapshot || draft;
+
+    if (!title) {
+      setBuildMessage("Add a title before saving.");
+      return;
+    }
+
+    setBuildMessage(null);
+    setIsSavingBuildItem(true);
+
+    try {
+      const savedId = await saveBuildItem({
+        itemId: editingBuildItemId ?? undefined,
+        kind: buildForm.kind,
+        sourceType: buildForm.sourceType,
+        title,
+        sourceText: buildForm.sourceText,
+        scriptSnapshot,
+        videoBrief: buildForm.videoBrief,
+        notes: buildForm.notes,
+        updatedAt: Date.now(),
+      });
+
+      if (!savedId) {
+        setBuildMessage("Could not save that Build item.");
+        return;
+      }
+
+      setEditingBuildItemId(savedId);
+      setBuildForm((current) => ({ ...current, title, scriptSnapshot }));
+      setBuildMessage(`Saved "${title}".`);
+    } finally {
+      setIsSavingBuildItem(false);
+    }
+  };
+
+  const updateBuildItemStatus = async (item: BuildItem, status: BuildItemStatus) => {
+    if (!requireLogin("Sign in with GitHub to update Build items.")) {
+      return;
+    }
+
+    setIsUpdatingBuildItem(true);
+
+    try {
+      const didUpdate = await setBuildItemStatus({ itemId: item._id, status, updatedAt: Date.now() });
+      setBuildMessage(didUpdate ? `${status === "archived" ? "Archived" : "Restored"} "${item.title}".` : "Could not update that Build item.");
+    } finally {
+      setIsUpdatingBuildItem(false);
+    }
+  };
+
+  const confirmDeleteBuildItem = async () => {
+    if (!buildPendingDeleteId) {
+      return;
+    }
+
+    setIsUpdatingBuildItem(true);
+
+    try {
+      const didDelete = await deleteBuildItem({ itemId: buildPendingDeleteId });
+      const deletedTitle = buildPendingDeleteItem?.title ?? "Build item";
+      setBuildPendingDeleteId(null);
+
+      if (editingBuildItemId === buildPendingDeleteId) {
+        setEditingBuildItemId(null);
+        setBuildForm(EMPTY_BUILD_FORM);
+      }
+
+      setBuildMessage(didDelete ? `Deleted "${deletedTitle}".` : "Could not delete that Build item.");
+    } finally {
+      setIsUpdatingBuildItem(false);
+    }
+  };
+
+  const sendBuildItemToScript = (item: BuildItem) => {
+    const nextDraft = item.scriptSnapshot?.trim() || item.sourceText?.trim() || "";
+
+    if (!nextDraft) {
+      setBuildMessage("That Build item does not have script text yet.");
+      return;
+    }
+
+    setDraftFromTool(nextDraft);
+    setCurrentPageIndex(0);
+    setActiveTab("script");
+    setBuildMessage(`Loaded "${item.title}" into Script.`);
   };
 
   const loadSelectedVoiceIntoForm = () => {
@@ -1899,6 +2178,17 @@ function App() {
         >
           <Article size={16} weight="bold" />
           <span>Script</span>
+        </button>
+        <button
+          className={activeTab === "build" ? "tab has-tooltip is-active" : "tab has-tooltip"}
+          onClick={() => setActiveTab("build")}
+          aria-current={activeTab === "build" ? "page" : undefined}
+          title="Open the script and video builder"
+          data-tooltip="Build workspace"
+          type="button"
+        >
+          <Sparkle size={16} weight="bold" />
+          <span>Build</span>
         </button>
         <button
           className={activeTab === "help" ? "tab has-tooltip is-active" : "tab has-tooltip"}
@@ -2386,124 +2676,6 @@ function App() {
               <span>{draftStats.readTime} read</span>
               <span>{draftStats.pages} pages</span>
             </div>
-            <div className="ai-generate-panel" aria-label="AI script generator">
-              <div>
-                <p className="eyebrow">Script generator</p>
-                <h2>Turn a topic, notes, URL, or markdown link into a prompt-ready script.</h2>
-                <p className="panel-copy">Sign in to use your own AI, Firecrawl, and voice keys. Logged-out prompting still works without AI.</p>
-              </div>
-              <button
-                className="save-button has-tooltip is-primary-action"
-                type="button"
-                onClick={openAiGenerator}
-                disabled={isCheckingAiSetup || isGeneratingScript}
-                title="Generate a script from the current text"
-                data-tooltip="Generate script"
-              >
-                <Sparkle size={17} weight="bold" />
-                {isCheckingAiSetup ? "Checking" : "Generate Script"}
-              </button>
-            </div>
-            <div className="api-settings-panel" aria-label="Script generator settings">
-              <div className="api-settings-header">
-                <div>
-                  <p className="eyebrow">Script generator settings</p>
-                  <h2>Bring your own keys.</h2>
-                </div>
-                {!isAuthenticated ? (
-                  <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
-                    <GithubLogo size={17} weight="bold" />
-                    Sign in
-                  </button>
-                ) : null}
-              </div>
-              <div className="api-key-status-list" aria-label="API key status">
-                {(apiKeyStatus?.keys ?? []).map((key) => (
-                  <span className={key.isConfigured ? "api-key-chip is-configured" : "api-key-chip"} key={key.service}>
-                    {API_KEY_SERVICE_OPTIONS.find((option) => option.value === key.service)?.label ?? key.service}
-                    {key.isConfigured ? " saved" : " missing"}
-                  </span>
-                ))}
-              </div>
-              {isAuthenticated ? (
-                <div className="api-key-grid">
-                  <div className="field-control">
-                    <span>Service</span>
-                    <CustomSelect
-                      ariaLabel="API key service"
-                      value={apiKeyService}
-                      options={API_KEY_SERVICE_OPTIONS}
-                      onChange={(value) => {
-                        setApiKeyService(value);
-                        const saved = apiKeyStatus?.keys.find((key) => key.service === value);
-                        setApiKeyModel(saved?.model ?? "");
-                        setApiKeySiteUrl(saved?.siteUrl ?? "");
-                        setApiKeyAppName(saved?.appName ?? "");
-                        setApiKeyMessage(null);
-                      }}
-                    />
-                  </div>
-                  <label className="field-control" htmlFor="api-key-value">
-                    <span>API key</span>
-                    <input
-                      id="api-key-value"
-                      type="password"
-                      value={apiKeyValue}
-                      onChange={(event) => setApiKeyValue(event.target.value)}
-                      placeholder="Paste key to save or replace"
-                    />
-                  </label>
-                  {apiKeyService === "openai" || apiKeyService === "claude" || apiKeyService === "openrouter" ? (
-                    <label className="field-control" htmlFor="api-key-model">
-                      <span>Model</span>
-                      <input
-                        id="api-key-model"
-                        type="text"
-                        value={apiKeyModel}
-                        onChange={(event) => setApiKeyModel(event.target.value)}
-                        placeholder={apiKeyService === "openai" ? "gpt-4.1-mini" : apiKeyService === "claude" ? "claude-3-5-sonnet-latest" : "openai/gpt-4.1-mini"}
-                      />
-                    </label>
-                  ) : null}
-                  {apiKeyService === "openrouter" ? (
-                    <>
-                      <label className="field-control" htmlFor="api-key-site-url">
-                        <span>Site URL</span>
-                        <input
-                          id="api-key-site-url"
-                          type="text"
-                          value={apiKeySiteUrl}
-                          onChange={(event) => setApiKeySiteUrl(event.target.value)}
-                          placeholder="https://fearless-dolphin-422.convex.site"
-                        />
-                      </label>
-                      <label className="field-control" htmlFor="api-key-app-name">
-                        <span>App name</span>
-                        <input
-                          id="api-key-app-name"
-                          type="text"
-                          value={apiKeyAppName}
-                          onChange={(event) => setApiKeyAppName(event.target.value)}
-                          placeholder="Teleprompt"
-                        />
-                      </label>
-                    </>
-                  ) : null}
-                  <button className="save-button" type="button" onClick={saveSelectedApiKey} disabled={isSavingApiKey}>
-                    <FloppyDisk size={17} weight="bold" />
-                    {isSavingApiKey ? "Saving" : "Save Key"}
-                  </button>
-                  <button className="danger-button" type="button" onClick={removeSelectedApiKey} disabled={isRemovingApiKey}>
-                    <Trash size={17} weight="bold" />
-                    {isRemovingApiKey ? "Removing" : "Remove Key"}
-                  </button>
-                </div>
-              ) : (
-                <p className="editor-note">Sign in to save provider keys. Raw keys are encrypted in Convex and never shown again.</p>
-              )}
-              {apiKeyMessage ? <p className="library-message">{apiKeyMessage}</p> : null}
-            </div>
-            {aiMessage ? <p className="library-message">{aiMessage}</p> : null}
             <p className="editor-note">Use `---` on its own line to create pages. Selected color uses safe markdown-compatible span tags.</p>
             <div className="script-library" aria-label="Shared script library">
               <div>
@@ -2616,6 +2788,367 @@ function App() {
           </section>
           {tabs}
         </>
+      ) : activeTab === "build" ? (
+        <>
+          <section className="build-view" aria-label="Build workspace">
+            <div className="editor-header">
+              <div>
+                <p className="eyebrow">Build</p>
+                <h1>Generate scripts. Plan videos.</h1>
+                <p className="panel-copy">Build is for signed-in users. Save your own keys to generate scripts, scrape links, prepare narration, and plan video builds from links, docs, scripts, or prompts.</p>
+              </div>
+              {!isAuthenticated ? (
+                <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
+                  <GithubLogo size={17} weight="bold" />
+                  Sign in
+                </button>
+              ) : null}
+            </div>
+
+            <div className="ai-generate-panel" aria-label="AI script generator">
+              <div>
+                <p className="eyebrow">Script generator</p>
+                <h2>Turn a topic, notes, URL, or markdown link into a prompt-ready script.</h2>
+                <p className="panel-copy">Uses the current Script text as source material. Firecrawl adds URL context when your key is saved.</p>
+              </div>
+              <button
+                className="save-button has-tooltip is-primary-action"
+                type="button"
+                onClick={openAiGenerator}
+                disabled={isCheckingAiSetup || isGeneratingScript}
+                title="Generate a script from the current text"
+                data-tooltip="Generate script"
+              >
+                <Sparkle size={17} weight="bold" />
+                {isCheckingAiSetup ? "Checking" : "Generate Script"}
+              </button>
+            </div>
+
+            <div className="api-settings-panel" aria-label="Script generator settings">
+              <div className="api-settings-header">
+                <div>
+                  <p className="eyebrow">BYOK settings</p>
+                  <h2>Bring your own keys.</h2>
+                  <p className="panel-copy">{API_KEY_HELP[apiKeyService].help}</p>
+                </div>
+                {!isAuthenticated ? (
+                  <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
+                    <GithubLogo size={17} weight="bold" />
+                    Sign in
+                  </button>
+                ) : null}
+              </div>
+              <div className="api-key-status-list" aria-label="API key status">
+                {(apiKeyStatus?.keys ?? []).map((key) => (
+                  <span className={key.isConfigured ? "api-key-chip is-configured" : "api-key-chip"} key={key.service}>
+                    {API_KEY_SERVICE_OPTIONS.find((option) => option.value === key.service)?.label ?? key.service}
+                    {key.isConfigured ? " saved" : " missing"}
+                  </span>
+                ))}
+              </div>
+              {isAuthenticated ? (
+                <div className="api-key-grid">
+                  <div className="field-control">
+                    <span>Service</span>
+                    <CustomSelect
+                      ariaLabel="API key service"
+                      value={apiKeyService}
+                      options={API_KEY_SERVICE_OPTIONS}
+                      onChange={(value) => {
+                        setApiKeyService(value);
+                        const saved = apiKeyStatus?.keys.find((key) => key.service === value);
+                        setApiKeyModel(saved?.model ?? "");
+                        setApiKeySiteUrl(saved?.siteUrl ?? "");
+                        setApiKeyAppName(saved?.appName ?? "");
+                        setApiKeyMessage(null);
+                      }}
+                    />
+                  </div>
+                  <label className="field-control" htmlFor="api-key-value">
+                    <span>{API_KEY_HELP[apiKeyService].keyLabel}</span>
+                    <input
+                      id="api-key-value"
+                      type="password"
+                      value={apiKeyValue}
+                      onChange={(event) => setApiKeyValue(event.target.value)}
+                      placeholder="Paste key to save or replace"
+                    />
+                  </label>
+                  {MODEL_KEY_SERVICES.has(apiKeyService) ? (
+                    <label className="field-control" htmlFor="api-key-model">
+                      <span>{API_KEY_HELP[apiKeyService].modelLabel}</span>
+                      <input
+                        id="api-key-model"
+                        type="text"
+                        value={apiKeyModel}
+                        onChange={(event) => setApiKeyModel(event.target.value)}
+                        placeholder={API_KEY_HELP[apiKeyService].modelPlaceholder}
+                      />
+                    </label>
+                  ) : null}
+                  {SITE_APP_KEY_SERVICES.has(apiKeyService) ? (
+                    <>
+                      <label className="field-control" htmlFor="api-key-site-url">
+                        <span>{API_KEY_HELP[apiKeyService].siteLabel}</span>
+                        <input
+                          id="api-key-site-url"
+                          type="text"
+                          value={apiKeySiteUrl}
+                          onChange={(event) => setApiKeySiteUrl(event.target.value)}
+                          placeholder={apiKeyService === "mux" ? "Mux webhook signing secret" : "https://fearless-dolphin-422.convex.site"}
+                        />
+                      </label>
+                      <label className="field-control" htmlFor="api-key-app-name">
+                        <span>{API_KEY_HELP[apiKeyService].appLabel}</span>
+                        <input
+                          id="api-key-app-name"
+                          type="text"
+                          value={apiKeyAppName}
+                          onChange={(event) => setApiKeyAppName(event.target.value)}
+                          placeholder={apiKeyService === "mux" ? "stream.mux.com" : "Teleprompt"}
+                        />
+                      </label>
+                    </>
+                  ) : null}
+                  <button className="save-button" type="button" onClick={saveSelectedApiKey} disabled={isSavingApiKey}>
+                    <FloppyDisk size={17} weight="bold" />
+                    {isSavingApiKey ? "Saving" : "Save Key"}
+                  </button>
+                  <button className="danger-button" type="button" onClick={removeSelectedApiKey} disabled={isRemovingApiKey}>
+                    <Trash size={17} weight="bold" />
+                    {isRemovingApiKey ? "Removing" : "Remove Key"}
+                  </button>
+                </div>
+              ) : (
+                <p className="editor-note">Sign in to save provider keys. Raw keys are encrypted in Convex and never shown again.</p>
+              )}
+              {apiKeyMessage ? <p className="library-message">{apiKeyMessage}</p> : null}
+            </div>
+            {aiMessage ? <p className="library-message">{aiMessage}</p> : null}
+
+            <section className="settings-panel build-library-panel" aria-label="Build library">
+              <div className="api-settings-header">
+                <div>
+                  <p className="eyebrow">Build library</p>
+                  <h2>Save scripts, videos, or both.</h2>
+                  <p className="panel-copy">Create reusable Build items before rendering is wired. Active items stay in the workspace; archived items stay out of the way until restored.</p>
+                </div>
+                <div className="build-summary">
+                  <span>{activeBuildCount} active</span>
+                  <span>{archivedBuildCount} archived</span>
+                </div>
+              </div>
+
+              <div className="build-form-grid">
+                <label className="field-control" htmlFor="build-title">
+                  <span>Title</span>
+                  <input
+                    id="build-title"
+                    type="text"
+                    value={buildForm.title}
+                    onChange={(event) => setBuildForm((current) => ({ ...current, title: event.target.value }))}
+                    placeholder="Product update video"
+                  />
+                </label>
+                <div className="field-control">
+                  <span>Build type</span>
+                  <CustomSelect
+                    ariaLabel="Build type"
+                    value={buildForm.kind}
+                    options={BUILD_KIND_OPTIONS}
+                    onChange={(value) => setBuildForm((current) => ({ ...current, kind: value }))}
+                  />
+                </div>
+                <div className="field-control">
+                  <span>Source</span>
+                  <CustomSelect
+                    ariaLabel="Build source"
+                    value={buildForm.sourceType}
+                    options={BUILD_SOURCE_OPTIONS}
+                    onChange={(value) => setBuildForm((current) => ({ ...current, sourceType: value }))}
+                  />
+                </div>
+                <label className="field-control is-wide" htmlFor="build-source">
+                  <span>Prompt, link, or doc reference</span>
+                  <input
+                    id="build-source"
+                    type="text"
+                    value={buildForm.sourceText}
+                    onChange={(event) => setBuildForm((current) => ({ ...current, sourceText: event.target.value }))}
+                    placeholder="Paste a URL, doc title, prompt, or content brief"
+                  />
+                </label>
+                <label className="field-control build-textarea-field" htmlFor="build-script">
+                  <span>Script snapshot</span>
+                  <textarea
+                    id="build-script"
+                    value={buildForm.scriptSnapshot}
+                    onChange={(event) => setBuildForm((current) => ({ ...current, scriptSnapshot: event.target.value }))}
+                    placeholder="Use current Script text, paste a script, or leave blank for video-only planning"
+                  />
+                </label>
+                <label className="field-control build-textarea-field" htmlFor="build-video-brief">
+                  <span>Video brief</span>
+                  <textarea
+                    id="build-video-brief"
+                    value={buildForm.videoBrief}
+                    onChange={(event) => setBuildForm((current) => ({ ...current, videoBrief: event.target.value }))}
+                    placeholder="Describe format, visuals, aspect ratio, captions, narration, and expected output"
+                  />
+                </label>
+                <label className="field-control build-textarea-field" htmlFor="build-notes">
+                  <span>Notes</span>
+                  <textarea
+                    id="build-notes"
+                    value={buildForm.notes}
+                    onChange={(event) => setBuildForm((current) => ({ ...current, notes: event.target.value }))}
+                    placeholder="Status, next step, render notes, or approval comments"
+                  />
+                </label>
+              </div>
+
+              <div className="build-action-row">
+                <button className="save-button" type="button" onClick={seedBuildFromCurrentScript}>
+                  <Article size={17} weight="bold" />
+                  Use Current Script
+                </button>
+                <button className="save-button is-primary-action" type="button" onClick={saveCurrentBuildItem} disabled={isSavingBuildItem}>
+                  <FloppyDisk size={17} weight="bold" />
+                  {isSavingBuildItem ? "Saving" : editingBuildItemId ? "Update Build Item" : "Save Build Item"}
+                </button>
+                <button className="save-button" type="button" onClick={clearBuildForm}>
+                  <Plus size={17} weight="bold" />
+                  New Build Item
+                </button>
+                <div className="field-control build-filter-control">
+                  <span>View</span>
+                  <CustomSelect
+                    ariaLabel="Build item status"
+                    value={buildStatusFilter}
+                    options={BUILD_STATUS_OPTIONS}
+                    onChange={setBuildStatusFilter}
+                  />
+                </div>
+              </div>
+
+              {buildMessage ? <p className="library-message">{buildMessage}</p> : null}
+
+              <div className="build-item-list" aria-label="Saved Build items">
+                {visibleBuildItems.length > 0 ? (
+                  visibleBuildItems.map((item) => (
+                    <article className={item.status === "archived" ? "build-item-card is-archived" : "build-item-card"} key={item._id}>
+                      <div>
+                        <div className="build-item-heading">
+                          <span className="build-kind-chip">
+                            {item.kind === "video" ? <VideoCamera size={14} weight="bold" /> : <Article size={14} weight="bold" />}
+                            {BUILD_KIND_OPTIONS.find((option) => option.value === item.kind)?.label ?? item.kind}
+                          </span>
+                          <span className="build-status-chip">{item.status}</span>
+                        </div>
+                        <h3>{item.title}</h3>
+                        <p>{item.videoBrief || item.sourceText || item.notes || "No brief added yet."}</p>
+                        <div className="build-item-meta">
+                          <span>{BUILD_SOURCE_OPTIONS.find((option) => option.value === item.sourceType)?.label ?? item.sourceType}</span>
+                          <span>Updated {new Date(item.updatedAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="build-item-actions">
+                        <button className="tool-button" type="button" onClick={() => editBuildItem(item)}>
+                          <PencilSimple size={16} weight="bold" />
+                          Edit
+                        </button>
+                        <button className="tool-button" type="button" onClick={() => sendBuildItemToScript(item)}>
+                          <Article size={16} weight="bold" />
+                          Script
+                        </button>
+                        <button
+                          className="tool-button"
+                          type="button"
+                          onClick={() => updateBuildItemStatus(item, item.status === "archived" ? "active" : "archived")}
+                          disabled={isUpdatingBuildItem}
+                        >
+                          <Archive size={16} weight="bold" />
+                          {item.status === "archived" ? "Restore" : "Archive"}
+                        </button>
+                        <button className="danger-button" type="button" onClick={() => setBuildPendingDeleteId(item._id)} disabled={isUpdatingBuildItem}>
+                          <Trash size={16} weight="bold" />
+                          Delete
+                        </button>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <p className="editor-note">No Build items in this view yet. Save a script, video plan, or combined build to start.</p>
+                )}
+              </div>
+
+              {buildPendingDeleteItem ? (
+                <div className="delete-popover" role="alertdialog" aria-labelledby="build-delete-title" aria-describedby="build-delete-copy">
+                  <div>
+                    <p className="eyebrow">Delete Build item</p>
+                    <h2 id="build-delete-title">Delete "{buildPendingDeleteItem.title}"?</h2>
+                    <p id="build-delete-copy">This permanently removes the saved Build item. Archive it instead if you may need it later.</p>
+                  </div>
+                  <div className="popover-actions">
+                    <button className="save-button" type="button" onClick={() => setBuildPendingDeleteId(null)} disabled={isUpdatingBuildItem}>
+                      Cancel
+                    </button>
+                    <button className="danger-button" type="button" onClick={confirmDeleteBuildItem} disabled={isUpdatingBuildItem}>
+                      <Trash size={17} weight="bold" />
+                      {isUpdatingBuildItem ? "Deleting" : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="settings-panel video-build-panel" aria-label="Video build workflow">
+              <div className="api-settings-header">
+                <div>
+                  <p className="eyebrow">Video builder</p>
+                  <h2>Links, docs, scripts, and prompts to video.</h2>
+                  <p className="panel-copy">Recommended path: Firecrawl for source context, AI for script and shot structure, HyperFrames or Remotion for rendering, R2 for large artifacts, and Mux for playback.</p>
+                </div>
+                <button
+                  className="save-button has-tooltip"
+                  type="button"
+                  onClick={() => {
+                    if (!requireLogin("Sign in with GitHub to use video build workflows and save video provider keys.")) {
+                      return;
+                    }
+                    setApiKeyMessage("Video rendering setup is documented in docs/build-video-setup.md.");
+                  }}
+                  title="Review the video build setup"
+                  data-tooltip="Video setup"
+                >
+                  <Article size={17} weight="bold" />
+                  Setup Guide
+                </button>
+              </div>
+              <div className="docs-grid">
+                {VIDEO_WORKFLOW_STEPS.map(([title, copy]) => (
+                  <article className="docs-card" key={title}>
+                    <h3>{title}</h3>
+                    <p>{copy}</p>
+                  </article>
+                ))}
+              </div>
+              <div className="video-provider-table" aria-label="Recommended video providers">
+                <div className="video-provider-row is-header">
+                  <span>Layer</span>
+                  <span>Best use</span>
+                </div>
+                {VIDEO_PROVIDER_GUIDE.map(([name, copy]) => (
+                  <div className="video-provider-row" key={name}>
+                    <span>{name}</span>
+                    <span>{copy}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </section>
+          {tabs}
+        </>
       ) : (
         <>
           <section className="settings-view" aria-label="Help and settings">
@@ -2625,7 +3158,7 @@ function App() {
                 <h1>How Teleprompt works.</h1>
               </div>
               <p className="about-copy">
-                Teleprompt has three main areas: read on Tab 1, write and generate on Tab 2, then tune defaults and learn shortcuts on Tab 3.
+                Teleprompt has four main areas: read in Prompter, write in Script, generate in Build, then tune defaults and learn shortcuts in Help.
                 Script Voice Profiles control writing tone for AI-generated scripts. Narration voice is separate and only applies to audio features.
               </p>
               <div className="docs-grid">

@@ -8,9 +8,11 @@ const serviceValidator = v.union(
   v.literal("openrouter"),
   v.literal("firecrawl"),
   v.literal("elevenlabs"),
+  v.literal("mux"),
+  v.literal("heygen"),
 );
 
-const SERVICES = ["openai", "claude", "openrouter", "firecrawl", "elevenlabs"] as const;
+const SERVICES = ["openai", "claude", "openrouter", "firecrawl", "elevenlabs", "mux", "heygen"] as const;
 
 export const getStatus = query({
   args: {},

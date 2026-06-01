@@ -80,6 +80,8 @@ export default defineSchema({
       v.literal("openrouter"),
       v.literal("firecrawl"),
       v.literal("elevenlabs"),
+      v.literal("mux"),
+      v.literal("heygen"),
     ),
     encryptedKey: v.string(),
     iv: v.string(),
@@ -91,4 +93,21 @@ export default defineSchema({
   })
     .index("by_ownerId_and_service", ["ownerId", "service"])
     .index("by_ownerId", ["ownerId"]),
+  buildItems: defineTable({
+    ownerId: v.id("users"),
+    kind: v.union(v.literal("script"), v.literal("video"), v.literal("both")),
+    status: v.union(v.literal("active"), v.literal("archived")),
+    sourceType: v.union(v.literal("prompt"), v.literal("link"), v.literal("doc"), v.literal("script"), v.literal("mixed")),
+    title: v.string(),
+    sourceText: v.optional(v.string()),
+    scriptSnapshot: v.optional(v.string()),
+    videoBrief: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    archivedAt: v.optional(v.number()),
+  })
+    .index("by_ownerId_and_status_and_updatedAt", ["ownerId", "status", "updatedAt"])
+    .index("by_ownerId_and_kind_and_status", ["ownerId", "kind", "status"])
+    .index("by_ownerId_and_updatedAt", ["ownerId", "updatedAt"]),
 });

@@ -2,8 +2,11 @@
 
 ## to do
 
+
 ## completed
 
+- [x] 2026-06-01 13:00 UTC - Added Build library save, edit, archive, restore, and delete support for script, video, and combined Build items. PRD: `prds/build-library-management.md`. Verified with `npx convex dev --once`, `npm run typecheck`, `npm run lint`, `npm run build`, and `npm run deploy:static:dev`.
+- [x] 2026-06-01 12:20 UTC - Added a logged-in Build tab for AI script generation, BYOK setup, Mux/HeyGen key status, and video workflow planning. PRD: `prds/build-tab-video-workflow.md`. Verified with `npx convex dev --once`, `npm run typecheck`, `npm run lint`, `npm run build`, and `npm run deploy:static:dev`.
 - [x] 2026-06-01 02:57 UTC - Removed the `Tab 1`, `Tab 2`, and `Tab 3` prefixes from the bottom rail labels so they read Prompter, Script, Help, and Sign in. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and `npm run deploy:static:dev`.
 - [x] 2026-06-01 02:40 UTC - Made Mini View smaller by default, draggable, resizable, and clamped to the desktop viewport. PRD: `prds/mini-view-drag-resize.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and `npm run deploy:static:dev`.
 - [x] 2026-06-01 00:04 UTC - Moved GitHub auth into the bottom tab rail and restyled it as a neutral tab-sized account control. PRD: `prds/bottom-tab-auth-control.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and `npm run deploy:static:dev`.

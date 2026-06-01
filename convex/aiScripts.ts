@@ -84,7 +84,7 @@ type RewriteResult =
 const MAX_CONTEXT_CHARS = 12000;
 
 type StoredUserApiKey = {
-  service: "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs";
+  service: "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "mux" | "heygen";
   encryptedKey: string;
   iv: string;
   tag: string;
@@ -305,7 +305,7 @@ const scrapeUrl = async (url: string, keys: StoredUserApiKey[]) => {
   if (!firecrawlKey) {
     return {
       ok: false as const,
-      message: "Add your Firecrawl API key in Script generator settings before generating from a URL.",
+      message: "Add your Firecrawl API key in Build settings before generating from a URL.",
     };
   }
 
@@ -495,7 +495,7 @@ export const generateScript = action({
       return {
         ok: false,
         code: "missing_setup",
-        message: "Add an OpenAI, Claude, or OpenRouter API key in Script generator settings.",
+        message: "Add an OpenAI, Claude, or OpenRouter API key in Build settings.",
       };
     }
 
@@ -519,7 +519,7 @@ export const generateScript = action({
       return {
         ok: false,
         code: "missing_setup",
-        message: "Add that provider API key in Script generator settings.",
+        message: "Add that provider API key in Build settings.",
       };
     }
 
@@ -596,7 +596,7 @@ export const rewriteForRsvp = action({
       return {
         ok: false,
         code: "missing_setup",
-        message: "Add an OpenAI, Claude, or OpenRouter API key in Script generator settings.",
+        message: "Add an OpenAI, Claude, or OpenRouter API key in Build settings.",
       };
     }
 
@@ -609,7 +609,7 @@ export const rewriteForRsvp = action({
       return {
         ok: false,
         code: "missing_setup",
-        message: "Add that provider API key in Script generator settings.",
+        message: "Add that provider API key in Build settings.",
       };
     }
 

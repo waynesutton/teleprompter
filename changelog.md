@@ -51,6 +51,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added a custom SVG favicon, 1200x630 social card, Open Graph metadata, Twitter large image card metadata, JSON-LD app/FAQ data, robots policy, and sitemap.
 - Added Convex Auth GitHub login, per-user saved scripts/defaults/custom voices, and encrypted bring-your-own-key AI, Firecrawl, and ElevenLabs settings.
 - Added a Tab 1 mini prompter popup using the Phosphor MonitorArrowUp icon, synced scroll/RSVP state, and forwarded keyboard shortcuts.
+- Added a logged-in Build tab for script generation, BYOK setup, and video workflow planning.
+- Added Mux and HeyGen to per-user BYOK status and encrypted key storage.
+- Added `docs/build-video-setup.md` for the recommended Firecrawl, AI, HyperFrames, Remotion, R2, Mux, and Convex job workflow.
+- Added a per-user Build item library for saving scripts, videos, or combined script-and-video work.
+- Added Build tab controls for editing, archiving, restoring, deleting, seeding from the current script, and sending saved Build scripts back to the Script tab.
 
 ### Changed
 
@@ -88,6 +93,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Moved GitHub auth into the bottom tab rail as a neutral tab-sized account control with green hover/focus treatment.
 - Made Mini View open as a smaller movable desktop panel with drag positioning, bottom-right resizing, and viewport clamping.
 - Shortened the bottom rail labels to Prompter, Script, Help, and Sign in.
+- Moved Script generator and BYOK settings out of Script and into Build.
+- Updated tab switching shortcuts so `Command/Ctrl + 3` opens Build and `Command/Ctrl + 4` opens Help.
+- Expanded the Build tab from setup-only planning into a content workspace for script and video drafts.
 
 ### Removed
 

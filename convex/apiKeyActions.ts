@@ -12,6 +12,8 @@ const serviceValidator = v.union(
   v.literal("openrouter"),
   v.literal("firecrawl"),
   v.literal("elevenlabs"),
+  v.literal("mux"),
+  v.literal("heygen"),
 );
 
 const getEncryptionKey = () => {

@@ -11,6 +11,7 @@
 import type * as aiScripts from "../aiScripts.js";
 import type * as apiKeyActions from "../apiKeyActions.js";
 import type * as auth from "../auth.js";
+import type * as buildItems from "../buildItems.js";
 import type * as http from "../http.js";
 import type * as legacyMigration from "../legacyMigration.js";
 import type * as scriptVoices from "../scriptVoices.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   aiScripts: typeof aiScripts;
   apiKeyActions: typeof apiKeyActions;
   auth: typeof auth;
+  buildItems: typeof buildItems;
   http: typeof http;
   legacyMigration: typeof legacyMigration;
   scriptVoices: typeof scriptVoices;

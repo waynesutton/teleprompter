@@ -12,16 +12,17 @@
 - `eslint.config.js` - ESLint configuration for TypeScript and React hooks.
 - `tsconfig.json` - TypeScript configuration for app and Convex code.
 - `src/main.tsx` - React entry point, Convex Auth provider setup, and bundled Inter, Inter Tight, JetBrains Mono, Lexend, and OpenDyslexic font imports.
-- `src/App.tsx` - Three-tab teleprompter experience with bottom-tab GitHub auth UI, per-user saved library gates, encrypted BYOK settings, Phosphor icons, prompting, draggable/resizable synced Mini View modal beside the hide-bar control, optional RSVP/ORP reading mode, keyboard tab switching, Tab 1 Layout hide/show control, countdown counter shortcut, fit-to-window measurement, Gear menu secondary options, app-driven script undo, script editing and preview, Graphite styled selectors, AI script generation with built-in and custom Script Voice Profiles, RSVP rewrite controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, user script save/load/delete, default settings, counter visibility, keyboard shortcuts, shortcut help modal, Tab 3 app docs and About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
-- `src/styles.css` - Graphite-inspired responsive interface styles, including bottom-tab auth control, BYOK settings, shared control tokens, true teleprompter end-scroll padding, RSVP word and pivot rendering, custom selectors with upward placement support, compact one-row desktop prompter dock spacing, Tab 1 Gear menu, Tab 1 Layout and mini-view side controls, draggable/resizable true Mini View modal, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator and Script Voice Profile controls, shortcut modal, login modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, app docs cards, shortcut, About table, and wrapping shared library controls.
+- `src/App.tsx` - Four-tab teleprompter experience with Prompter, Script, Build, Help, bottom-tab GitHub auth UI, per-user saved library gates, encrypted BYOK settings, Phosphor icons, prompting, draggable/resizable synced Mini View modal beside the hide-bar control, optional RSVP/ORP reading mode, keyboard tab switching, Tab 1 Layout hide/show control, countdown counter shortcut, fit-to-window measurement, Gear menu secondary options, app-driven script undo, script editing and preview, Graphite styled selectors, Build tab AI script generation, Build item save/edit/archive/delete workspace, built-in and custom Script Voice Profiles, video workflow planning, RSVP rewrite controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, user script save/load/delete, default settings, counter visibility, keyboard shortcuts, shortcut help modal, Help app docs and About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
+- `src/styles.css` - Graphite-inspired responsive interface styles, including bottom-tab auth control, BYOK settings, Build video workflow and Build item library panels, shared control tokens, true teleprompter end-scroll padding, RSVP word and pivot rendering, custom selectors with upward placement support, compact one-row desktop prompter dock spacing, Tab 1 Gear menu, Tab 1 Layout and mini-view side controls, draggable/resizable true Mini View modal, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator and Script Voice Profile controls, shortcut modal, login modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, app docs cards, shortcut, About table, and wrapping shared library controls.
 - `src/vite-env.d.ts` - Vite environment type references.
 - `convex/auth.ts` - Convex Auth GitHub provider configuration and exported auth functions.
-- `convex/schema.ts` - Convex schema for auth tables, per-user prompt state, per-user default settings, Graphite font and dark grey color selection, folder-aware saved scripts, custom Script Voice Profiles, and encrypted user API key records.
+- `convex/schema.ts` - Convex schema for auth tables, per-user prompt state, per-user default settings, Graphite font and dark grey color selection, folder-aware saved scripts, Build items, custom Script Voice Profiles, and encrypted user API key records including Mux and HeyGen.
 - `convex/teleprompter.ts` - Convex queries and mutations for authenticated current prompt state, per-user default settings, Graphite font and dark grey color validation, and folder-aware saved script save/delete.
+- `convex/buildItems.ts` - Convex queries and mutations for authenticated Build item listing, saving, editing, archiving, restoring, and deleting.
 - `convex/aiScripts.ts` - Convex actions for authenticated BYOK provider status, Script Voice Profile-aware script generation with OpenAI, Claude, OpenRouter, Firecrawl URL scraping, and optional RSVP script rewriting.
 - `convex/scriptVoices.ts` - Convex queries and mutations for listing, saving, updating, and deleting authenticated custom Script Voice Profiles.
-- `convex/userApiKeys.ts` - Convex queries and mutations for per-user encrypted API key status, storage, and removal.
-- `convex/apiKeyActions.ts` - Node Convex action that encrypts user API keys before storing them.
+- `convex/userApiKeys.ts` - Convex queries and mutations for per-user encrypted AI, scraping, voice, Mux, and HeyGen API key status, storage, and removal.
+- `convex/apiKeyActions.ts` - Node Convex action that encrypts AI, scraping, voice, Mux, and HeyGen user API keys before storing them.
 - `convex/users.ts` - Convex query for the currently signed-in GitHub user profile.
 - `convex/legacyMigration.ts` - One-time authenticated mutation for claiming legacy shared records for the configured owner.
 - `convex/voice.ts` - Convex action for checking authenticated ElevenLabs BYOK setup without exposing the key.
@@ -30,6 +31,7 @@
 - `convex/http.ts` - HTTP routes for Convex Auth plus static hosting routes that serve the built app from Convex storage.
 - `convex/_generated/` - Convex generated client and server types.
 - `convex/tsconfig.json` - Convex TypeScript configuration generated by Convex.
+- `docs/build-video-setup.md` - Setup guide for Build tab video generation architecture with Firecrawl, AI, HyperFrames, Remotion, R2, Mux, and Convex job tracking.
 - `prds/teleprompter-app.md` - Product requirements for the local teleprompter build.
 - `prds/shared-script-library.md` - Product requirements for shared script save/load.
 - `prds/app-interaction-polish.md` - Product requirements for app-wide UI interaction polish.
@@ -59,5 +61,7 @@
 - `prds/mini-view-true-modal.md` - Product requirements for converting Mini View from a browser popup into an app-owned modal.
 - `prds/bottom-tab-auth-control.md` - Product requirements for moving GitHub auth into the bottom tab rail.
 - `prds/mini-view-drag-resize.md` - Product requirements for Mini View drag, resize, smaller default frame, and viewport clamping.
+- `prds/build-tab-video-workflow.md` - Product requirements for the Build tab, video workflow planning, and video provider BYOK setup.
+- `prds/build-library-management.md` - Product requirements for the Build item save, edit, archive, restore, and delete workspace.
 - `changelog.md` - Project changelog.
 - `task.md` - Completed task log.

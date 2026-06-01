@@ -1140,6 +1140,167 @@ textarea {
   gap: 12px;
 }
 
+.build-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 18px;
+  width: min(1760px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding: 48px 0 128px;
+}
+
+.video-build-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.build-library-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.build-summary,
+.build-action-row,
+.build-item-actions,
+.build-item-heading,
+.build-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.build-summary span,
+.build-kind-chip,
+.build-status-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--quiet-white);
+  border-radius: 999px;
+  background: var(--soft-black);
+  color: var(--muted-white);
+  font: 800 11px/1.1 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+}
+
+.build-kind-chip {
+  border-color: rgba(180, 255, 57, 0.36);
+  color: var(--graphite-accent);
+}
+
+.build-status-chip {
+  color: var(--graphite-secondary);
+}
+
+.build-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.build-form-grid .is-wide,
+.build-textarea-field {
+  grid-column: span 3;
+}
+
+.build-textarea-field textarea {
+  min-height: 108px;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.build-filter-control {
+  min-width: 170px;
+  margin-left: auto;
+}
+
+.build-item-list {
+  display: grid;
+  gap: 10px;
+}
+
+.build-item-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--control-border);
+  border-radius: 14px;
+  background: var(--soft-black);
+}
+
+.build-item-card.is-archived {
+  opacity: 0.72;
+}
+
+.build-item-card h3 {
+  margin: 8px 0 6px;
+  color: var(--graphite-primary);
+  font-family: "Inter Tight", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.15;
+}
+
+.build-item-card p {
+  max-width: 88ch;
+  margin: 0;
+  color: var(--graphite-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.build-item-meta {
+  margin-top: 10px;
+  color: var(--muted-white);
+  font: 700 12px/1.2 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.video-provider-table {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--soft-black);
+}
+
+.video-provider-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.35fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(156, 163, 175, 0.12);
+  color: var(--graphite-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.video-provider-row:first-child {
+  border-top: 0;
+}
+
+.video-provider-row span:first-child {
+  color: var(--graphite-primary);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 800;
+}
+
+.video-provider-row.is-header {
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--graphite-primary);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 textarea:focus {
   border-color: var(--focus-white);
   box-shadow: 0 0 0 4px var(--focus-ring);
@@ -1877,7 +2038,7 @@ textarea:focus-visible {
   .tab-list {
     flex: 1 1 auto;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     border-radius: 8px;
   }
 
@@ -1993,6 +2154,46 @@ textarea:focus-visible {
 
   .api-key-grid {
     grid-template-columns: 1fr;
+  }
+
+  .build-form-grid,
+  .build-form-grid .is-wide,
+  .build-textarea-field {
+    grid-template-columns: 1fr;
+    grid-column: span 1;
+  }
+
+  .build-action-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .build-filter-control {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .build-item-card {
+    grid-template-columns: 1fr;
+  }
+
+  .build-item-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .build-item-actions > button {
+    width: 100%;
+  }
+
+  .build-view {
+    width: min(100%, calc(100vw - 24px));
+    padding-top: 22px;
+  }
+
+  .video-provider-row {
+    grid-template-columns: 1fr;
+    gap: 5px;
   }
 
   .script-toolbar,
