@@ -9,10 +9,15 @@
  */
 
 import type * as aiScripts from "../aiScripts.js";
+import type * as apiKeyActions from "../apiKeyActions.js";
+import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as legacyMigration from "../legacyMigration.js";
 import type * as scriptVoices from "../scriptVoices.js";
 import type * as staticHosting from "../staticHosting.js";
 import type * as teleprompter from "../teleprompter.js";
+import type * as userApiKeys from "../userApiKeys.js";
+import type * as users from "../users.js";
 import type * as voice from "../voice.js";
 
 import type {
@@ -23,10 +28,15 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   aiScripts: typeof aiScripts;
+  apiKeyActions: typeof apiKeyActions;
+  auth: typeof auth;
   http: typeof http;
+  legacyMigration: typeof legacyMigration;
   scriptVoices: typeof scriptVoices;
   staticHosting: typeof staticHosting;
   teleprompter: typeof teleprompter;
+  userApiKeys: typeof userApiKeys;
+  users: typeof users;
   voice: typeof voice;
 }>;
 

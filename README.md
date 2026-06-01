@@ -7,13 +7,16 @@ It is built for one person recording a talk, product update, tutorial, or video 
 ## Features
 
 - Browser teleprompter with live scroll, page controls, fit-to-window, mirror, guide line, and dock hide/show.
+- Mini popup prompter view with synced scroll/RSVP state, playback state, page progress, and keyboard shortcuts.
 - RSVP reading mode with one-word-at-a-time playback and red ORP pivot-letter highlighting.
 - Script editor with preview, page breaks, color formatting, markdown export, counters, and app-driven undo.
 - Shared script library with folders, save, load, and delete.
-- Keyboard shortcuts for playback, tab switching, sizing, speed, pages, RSVP, help, undo, counter visibility, and control-bar visibility.
+- Keyboard shortcuts for playback, tab switching, sizing, speed, pages, mini view, RSVP, help, undo, counter visibility, and control-bar visibility.
 - Optional AI script generator using OpenAI, Claude, OpenRouter, and Firecrawl URL context.
-- Built-in Script Voice Profiles for AI generation: WayneSutton.ai, Teleprompter Natural, Founder Update, YouTube Intro, Investor Pitch, Educator, and High-Energy Creator.
-- Custom Script Voice Profiles saved in Convex with audience, tone, pacing, banned words, preferred phrases, examples, structure, and default length.
+- Built-in Script Voice Profiles for AI generation: Teleprompter Natural, Founder Update, YouTube Intro, Investor Pitch, Educator, and High-Energy Creator.
+- GitHub login with per-user saved scripts, folders, defaults, API keys, and custom Script Voice Profiles.
+- Bring-your-own-key AI setup for OpenAI, Claude, OpenRouter, Firecrawl, and ElevenLabs.
+- Custom Script Voice Profiles saved per user in Convex with audience, tone, pacing, banned words, preferred phrases, examples, structure, and default length.
 - Optional ElevenLabs voice setup gate for narration features.
 - Tab 3 app docs, shortcut reference, saved defaults, and About feature table.
 - Graphite-styled UI with Phosphor Icons and accessible font options.
@@ -23,11 +26,11 @@ It is built for one person recording a talk, product update, tutorial, or video 
 
 Use **Tab 2 Script** to write, paste, save, load, format, preview, or generate a script.
 
-Use **Tab 1 Prompter** to read it live. Scroll mode behaves like a standard teleprompter. RSVP mode shows one word at a time with a red pivot letter.
+Use **Tab 1 Prompter** to read it live. Scroll mode behaves like a standard teleprompter. RSVP mode shows one word at a time with a red pivot letter. The mini view opens a compact synced popup for recording setups where the full app should stay out of the way.
 
 Use **Tab 3 Help** for app docs, keyboard shortcuts, defaults, and the About section.
 
-AI is optional. Without AI environment variables, the core teleprompter still works. If a user clicks an AI-only feature before setup, the app shows an in-app setup message.
+AI is optional. Without login, the core teleprompter still works. Logged-in users add their own provider keys in the Script generator settings section.
 
 ## Script voice vs narration voice
 
@@ -43,6 +46,7 @@ They affect tone, pacing, audience, structure, preferred phrases, banned words, 
 - Vite 7
 - TypeScript
 - Convex
+- Convex Auth
 - `@convex-dev/static-hosting`
 - Phosphor Icons
 - Fontsource fonts
@@ -54,7 +58,7 @@ They affect tone, pacing, audience, structure, preferred phrases, banned words, 
 | --- | --- |
 | `@convex-dev/static-hosting` | Serves the built Vite app from Convex storage. |
 
-The app also uses regular Convex functions for prompt state, saved scripts, custom Script Voice Profiles, AI setup checks, AI generation, RSVP rewriting, and voice setup checks.
+The app also uses regular Convex functions for per-user prompt state, saved scripts, custom Script Voice Profiles, encrypted BYOK setup, AI generation, RSVP rewriting, and voice setup checks.
 
 ## Getting started
 
@@ -77,25 +81,35 @@ Required for the frontend:
 VITE_CONVEX_URL=
 ```
 
-Optional AI and voice features:
+Required for GitHub login:
 
 ```bash
-OPENAI_API_KEY=
-OPENAI_SCRIPT_MODEL=
-
-ANTHROPIC_API_KEY=
-ANTHROPIC_SCRIPT_MODEL=
-
-OPENROUTER_API_KEY=
-OPENROUTER_SCRIPT_MODEL=
-OPENROUTER_SITE_URL=
-OPENROUTER_APP_NAME=
-
-FIRECRAWL_API_KEY=
-ELEVENLABS_API_KEY=
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
+SITE_URL=
+JWT_PRIVATE_KEY=
+JWKS=
+USER_KEYS_SECRET=
 ```
 
-The app works without the optional keys. Those controls show setup messages instead of blocking the main teleprompter.
+Optional legacy migration:
+
+```bash
+LEGACY_OWNER_EMAIL=
+LEGACY_OWNER_GITHUB_LOGIN=
+```
+
+User-owned optional keys are entered in the app after GitHub login:
+
+```bash
+OpenAI
+Claude
+OpenRouter
+Firecrawl
+ElevenLabs
+```
+
+The app works without login for local paste/type/read workflows. Saving, loading, AI, Firecrawl, voice setup, defaults, and custom voice profiles require GitHub login.
 
 ## Scripts
 

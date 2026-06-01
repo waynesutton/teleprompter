@@ -1,3 +1,4 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -52,9 +53,15 @@ const getCanonicalFolder = (folder: string) => normalizeFolder(folder).toLowerCa
 export const getCurrent = query({
   args: {},
   handler: async (ctx) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return null;
+    }
+
     const prompt = await ctx.db
       .query("prompts")
-      .withIndex("by_key", (q) => q.eq("key", LOCAL_PROMPT_KEY))
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
       .unique();
 
     if (!prompt) {
@@ -75,9 +82,15 @@ export const getCurrent = query({
 export const getDefaultSettings = query({
   args: {},
   handler: async (ctx) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return null;
+    }
+
     const settings = await ctx.db
       .query("defaultSettings")
-      .withIndex("by_key", (q) => q.eq("key", DEFAULT_SETTINGS_KEY))
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
       .unique();
 
     if (!settings) {
@@ -91,9 +104,15 @@ export const getDefaultSettings = query({
 export const listSavedScripts = query({
   args: {},
   handler: async (ctx) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return [];
+    }
+
     return await ctx.db
       .query("savedScripts")
-      .withIndex("by_updatedAt")
+      .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", ownerId))
       .order("desc")
       .take(SAVED_SCRIPT_LIMIT);
   },
@@ -115,9 +134,15 @@ export const save = mutation({
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return null;
+    }
+
     const prompt = await ctx.db
       .query("prompts")
-      .withIndex("by_key", (q) => q.eq("key", LOCAL_PROMPT_KEY))
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
       .unique();
 
     if (
@@ -144,6 +169,7 @@ export const save = mutation({
 
     return await ctx.db.insert("prompts", {
       key: LOCAL_PROMPT_KEY,
+      ownerId,
       ...args,
     });
   },
@@ -162,9 +188,15 @@ export const saveDefaultSettings = mutation({
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return null;
+    }
+
     const existing = await ctx.db
       .query("defaultSettings")
-      .withIndex("by_key", (q) => q.eq("key", DEFAULT_SETTINGS_KEY))
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId))
       .unique();
 
     if (
@@ -188,6 +220,7 @@ export const saveDefaultSettings = mutation({
 
     return await ctx.db.insert("defaultSettings", {
       key: DEFAULT_SETTINGS_KEY,
+      ownerId,
       ...args,
     });
   },
@@ -201,6 +234,12 @@ export const saveSharedScript = mutation({
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return null;
+    }
+
     const title = normalizeTitle(args.title);
     const folder = normalizeFolder(args.folder ?? "");
     const script = args.script.trim();
@@ -213,9 +252,7 @@ export const saveSharedScript = mutation({
     const canonicalFolder = getCanonicalFolder(folder);
     const matchingTitleScripts = await ctx.db
       .query("savedScripts")
-      .withIndex("by_canonicalTitle", (q) =>
-        q.eq("canonicalTitle", canonicalTitle),
-      )
+      .withIndex("by_ownerId_and_canonicalTitle", (q) => q.eq("ownerId", ownerId).eq("canonicalTitle", canonicalTitle))
       .collect();
     const existing = matchingTitleScripts.find(
       (savedScript) => (savedScript.canonicalFolder ?? "") === canonicalFolder,
@@ -242,6 +279,7 @@ export const saveSharedScript = mutation({
     }
 
     return await ctx.db.insert("savedScripts", {
+      ownerId,
       canonicalTitle,
       folder: folder || undefined,
       canonicalFolder: canonicalFolder || undefined,
@@ -258,9 +296,15 @@ export const deleteSharedScript = mutation({
     scriptId: v.id("savedScripts"),
   },
   handler: async (ctx, args) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return false;
+    }
+
     const existing = await ctx.db.get(args.scriptId);
 
-    if (!existing) {
+    if (!existing || existing.ownerId !== ownerId) {
       return false;
     }
 

@@ -1,4 +1,9 @@
+"use node";
+
+import { createDecipheriv, createHash } from "node:crypto";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { action } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 const providerValidator = v.union(
@@ -39,6 +44,14 @@ type ProviderConfig = {
   label: string;
   apiKey: string;
   model: string;
+  siteUrl?: string;
+  appName?: string;
+};
+
+type AiProviderStatusResult = {
+  isAuthenticated: boolean;
+  providers: Array<{ provider: Provider; label: string; model: string }>;
+  hasFirecrawl: boolean;
 };
 
 type GenerateResult =
@@ -70,38 +83,68 @@ type RewriteResult =
 
 const MAX_CONTEXT_CHARS = 12000;
 
-const getEnv = (key: string) => process.env[key]?.trim() ?? "";
+type StoredUserApiKey = {
+  service: "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs";
+  encryptedKey: string;
+  iv: string;
+  tag: string;
+  model?: string;
+  siteUrl?: string;
+  appName?: string;
+};
 
-const getConfiguredProviders = (): ProviderConfig[] => {
+const getEncryptionKey = () => {
+  const secret = process.env.USER_KEYS_SECRET?.trim();
+
+  if (!secret) {
+    throw new Error("USER_KEYS_SECRET is not configured.");
+  }
+
+  return createHash("sha256").update(secret).digest();
+};
+
+const decryptKey = (key: StoredUserApiKey) => {
+  const decipher = createDecipheriv("aes-256-gcm", getEncryptionKey(), Buffer.from(key.iv, "base64"));
+  decipher.setAuthTag(Buffer.from(key.tag, "base64"));
+
+  return Buffer.concat([
+    decipher.update(Buffer.from(key.encryptedKey, "base64")),
+    decipher.final(),
+  ]).toString("utf8");
+};
+
+const getConfiguredProviders = (keys: StoredUserApiKey[]): ProviderConfig[] => {
   const providers: ProviderConfig[] = [];
+  const openAiKey = keys.find((key) => key.service === "openai");
+  const anthropicKey = keys.find((key) => key.service === "claude");
+  const openRouterKey = keys.find((key) => key.service === "openrouter");
 
-  const openAiModel = getEnv("OPENAI_SCRIPT_MODEL");
-  if (getEnv("OPENAI_API_KEY") && openAiModel) {
+  if (openAiKey && openAiKey.model) {
     providers.push({
       provider: "openai",
       label: "OpenAI",
-      apiKey: getEnv("OPENAI_API_KEY"),
-      model: openAiModel,
+      apiKey: decryptKey(openAiKey),
+      model: openAiKey.model,
     });
   }
 
-  const anthropicModel = getEnv("ANTHROPIC_SCRIPT_MODEL");
-  if (getEnv("ANTHROPIC_API_KEY") && anthropicModel) {
+  if (anthropicKey && anthropicKey.model) {
     providers.push({
       provider: "claude",
       label: "Claude",
-      apiKey: getEnv("ANTHROPIC_API_KEY"),
-      model: anthropicModel,
+      apiKey: decryptKey(anthropicKey),
+      model: anthropicKey.model,
     });
   }
 
-  const openRouterModel = getEnv("OPENROUTER_SCRIPT_MODEL");
-  if (getEnv("OPENROUTER_API_KEY") && openRouterModel) {
+  if (openRouterKey && openRouterKey.model) {
     providers.push({
       provider: "openrouter",
       label: "OpenRouter",
-      apiKey: getEnv("OPENROUTER_API_KEY"),
-      model: openRouterModel,
+      apiKey: decryptKey(openRouterKey),
+      model: openRouterKey.model,
+      siteUrl: openRouterKey.siteUrl,
+      appName: openRouterKey.appName,
     });
   }
 
@@ -257,19 +300,19 @@ const parseChatCompletionText = (data: unknown): string => {
   return message.content;
 };
 
-const scrapeUrl = async (url: string) => {
-  const firecrawlApiKey = getEnv("FIRECRAWL_API_KEY");
-  if (!firecrawlApiKey) {
+const scrapeUrl = async (url: string, keys: StoredUserApiKey[]) => {
+  const firecrawlKey = keys.find((key) => key.service === "firecrawl");
+  if (!firecrawlKey) {
     return {
       ok: false as const,
-      message: "These options are not setup. Contact the app creator to config.",
+      message: "Add your Firecrawl API key in Script generator settings before generating from a URL.",
     };
   }
 
   const response = await fetch("https://api.firecrawl.dev/v2/scrape", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${firecrawlApiKey}`,
+      Authorization: `Bearer ${decryptKey(firecrawlKey)}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -358,8 +401,8 @@ const callOpenRouter = async (config: ProviderConfig, model: string, systemPromp
     Authorization: `Bearer ${config.apiKey}`,
     "Content-Type": "application/json",
   };
-  const siteUrl = getEnv("OPENROUTER_SITE_URL");
-  const appName = getEnv("OPENROUTER_APP_NAME");
+  const siteUrl = config.siteUrl;
+  const appName = config.appName;
 
   if (siteUrl) {
     headers["HTTP-Referer"] = siteUrl;
@@ -392,14 +435,27 @@ const callOpenRouter = async (config: ProviderConfig, model: string, systemPromp
 
 export const getAiProviderStatus = action({
   args: {},
-  handler: async () => {
+  handler: async (ctx): Promise<AiProviderStatusResult> => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return {
+        isAuthenticated: false,
+        providers: [],
+        hasFirecrawl: false,
+      };
+    }
+
+    const keys: StoredUserApiKey[] = await ctx.runQuery(internal.userApiKeys.getForCurrentUser, {});
+
     return {
-      providers: getConfiguredProviders().map(({ provider, label, model }) => ({
+      isAuthenticated: true,
+      providers: getConfiguredProviders(keys).map(({ provider, label, model }) => ({
         provider,
         label,
         model,
       })),
-      hasFirecrawl: Boolean(getEnv("FIRECRAWL_API_KEY")),
+      hasFirecrawl: Boolean(keys.find((key) => key.service === "firecrawl")),
     };
   },
 });
@@ -413,8 +469,18 @@ export const generateScript = action({
     scriptVoiceProfile: v.optional(scriptVoiceProfileValidator),
     instructions: v.optional(v.string()),
   },
-  handler: async (_ctx, args): Promise<GenerateResult> => {
+  handler: async (ctx, args): Promise<GenerateResult> => {
+    const ownerId = await getAuthUserId(ctx);
     const input = args.input.trim();
+
+    if (!ownerId) {
+      return {
+        ok: false,
+        code: "missing_setup",
+        message: "Sign in with GitHub and add your API keys before using AI generation.",
+      };
+    }
+
     if (!input) {
       return {
         ok: false,
@@ -423,17 +489,18 @@ export const generateScript = action({
       };
     }
 
-    const configuredProviders = getConfiguredProviders();
+    const keys: StoredUserApiKey[] = await ctx.runQuery(internal.userApiKeys.getForCurrentUser, {});
+    const configuredProviders = getConfiguredProviders(keys);
     if (configuredProviders.length === 0) {
       return {
         ok: false,
         code: "missing_setup",
-        message: "These options are not setup. Contact the app creator to config.",
+        message: "Add an OpenAI, Claude, or OpenRouter API key in Script generator settings.",
       };
     }
 
     const url = getFirstUrl(input);
-    const scraped = url ? await scrapeUrl(url) : null;
+    const scraped = url ? await scrapeUrl(url, keys) : null;
 
     if (scraped && !scraped.ok) {
       return {
@@ -452,7 +519,7 @@ export const generateScript = action({
       return {
         ok: false,
         code: "missing_setup",
-        message: "These options are not setup. Contact the app creator to config.",
+        message: "Add that provider API key in Script generator settings.",
       };
     }
 
@@ -503,8 +570,18 @@ export const rewriteForRsvp = action({
     provider: providerValidator,
     modelOverride: v.optional(v.string()),
   },
-  handler: async (_ctx, args): Promise<RewriteResult> => {
+  handler: async (ctx, args): Promise<RewriteResult> => {
+    const ownerId = await getAuthUserId(ctx);
     const input = args.input.trim();
+
+    if (!ownerId) {
+      return {
+        ok: false,
+        code: "missing_setup",
+        message: "Sign in with GitHub and add your API keys before using AI RSVP rewrite.",
+      };
+    }
+
     if (!input) {
       return {
         ok: false,
@@ -513,12 +590,13 @@ export const rewriteForRsvp = action({
       };
     }
 
-    const configuredProviders = getConfiguredProviders();
+    const keys: StoredUserApiKey[] = await ctx.runQuery(internal.userApiKeys.getForCurrentUser, {});
+    const configuredProviders = getConfiguredProviders(keys);
     if (configuredProviders.length === 0) {
       return {
         ok: false,
         code: "missing_setup",
-        message: "These options are not setup. Contact the app creator to config.",
+        message: "Add an OpenAI, Claude, or OpenRouter API key in Script generator settings.",
       };
     }
 
@@ -531,7 +609,7 @@ export const rewriteForRsvp = action({
       return {
         ok: false,
         code: "missing_setup",
-        message: "These options are not setup. Contact the app creator to config.",
+        message: "Add that provider API key in Script generator settings.",
       };
     }
 

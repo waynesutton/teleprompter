@@ -1,3 +1,4 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -12,9 +13,15 @@ const getCanonicalName = (name: string) => normalizeName(name).toLowerCase();
 export const list = query({
   args: {},
   handler: async (ctx) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return [];
+    }
+
     return await ctx.db
       .query("scriptVoiceProfiles")
-      .withIndex("by_updatedAt")
+      .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", ownerId))
       .order("desc")
       .take(SCRIPT_VOICE_PROFILE_LIMIT);
   },
@@ -34,6 +41,12 @@ export const save = mutation({
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return null;
+    }
+
     const name = normalizeName(args.name);
     const canonicalName = getCanonicalName(name);
 
@@ -43,9 +56,10 @@ export const save = mutation({
 
     const existing = await ctx.db
       .query("scriptVoiceProfiles")
-      .withIndex("by_canonicalName", (q) => q.eq("canonicalName", canonicalName))
+      .withIndex("by_ownerId_and_canonicalName", (q) => q.eq("ownerId", ownerId).eq("canonicalName", canonicalName))
       .unique();
     const nextProfile = {
+      ownerId,
       canonicalName,
       name,
       audience: args.audience.trim(),
@@ -76,9 +90,15 @@ export const remove = mutation({
     profileId: v.id("scriptVoiceProfiles"),
   },
   handler: async (ctx, args) => {
+    const ownerId = await getAuthUserId(ctx);
+
+    if (!ownerId) {
+      return false;
+    }
+
     const existing = await ctx.db.get(args.profileId);
 
-    if (!existing) {
+    if (!existing || existing.ownerId !== ownerId) {
       return false;
     }
 

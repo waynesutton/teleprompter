@@ -45,10 +45,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added a Tab 1 Gear menu for secondary prompter options.
 - Added a Tab 1 Layout icon beside the Prompter tab for hiding and showing the main control bar.
 - Added `C` as a keyboard shortcut for showing and hiding the countdown counter.
-- Added built-in Script Voice Profiles for AI script generation, including WayneSutton.ai, Teleprompter Natural, Founder Update, YouTube Intro, Investor Pitch, Educator, and High-Energy Creator.
+- Added built-in Script Voice Profiles for AI script generation, including Teleprompter Natural, Founder Update, YouTube Intro, Investor Pitch, Educator, and High-Energy Creator.
 - Added Convex-backed custom Script Voice Profiles with save, edit, import-notes, and delete controls in the Tab 2 generator modal.
 - Added a top-of-Tab-3 app docs section explaining the app workflow, Script Voice Profiles, RSVP, saving, shortcuts, and separate narration voice setup.
 - Added a custom SVG favicon, 1200x630 social card, Open Graph metadata, Twitter large image card metadata, JSON-LD app/FAQ data, robots policy, and sitemap.
+- Added Convex Auth GitHub login, per-user saved scripts/defaults/custom voices, and encrypted bring-your-own-key AI, Firecrawl, and ElevenLabs settings.
+- Added a Tab 1 mini prompter popup using the Phosphor MonitorArrowUp icon, synced scroll/RSVP state, and forwarded keyboard shortcuts.
 
 ### Changed
 
@@ -79,6 +81,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Adjusted Fit-to-window sizing to measure with the fit layout instead of the teleprompter exit padding.
 - Updated AI script generation prompts to apply the selected Script Voice Profile while keeping ElevenLabs narration voice separate.
 - Refreshed the README with current features, app workflow, optional AI/voice setup, and public metadata details.
+- Changed AI, Firecrawl, and ElevenLabs setup from deployment-wide environment keys to per-user keys saved after GitHub login.
+- Updated README and Tab 3 docs with the mini view, auth, and BYOK workflow details.
+- Moved the mini view launcher beside the Tab 1 hide-bar control, shrank the mini popup controls, and removed the mini footer strip.
+- Converted Mini View from a browser popup to a true in-app modal so it has no browser address/download chrome or fake window dots.
+- Moved GitHub auth into the bottom tab rail as a neutral tab-sized account control with green hover/focus treatment.
+- Made Mini View open as a smaller movable desktop panel with drag positioning, bottom-right resizing, and viewport clamping.
+- Shortened the bottom rail labels to Prompter, Script, Help, and Sign in.
 
 ### Removed
 

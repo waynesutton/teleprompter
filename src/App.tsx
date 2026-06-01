@@ -1,5 +1,6 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import {
   ArrowCounterClockwise,
   Article,
@@ -14,9 +15,11 @@ import {
   FolderOpen,
   Gauge,
   GearSix,
+  GithubLogo,
   Layout,
   List,
   Microphone,
+  MonitorArrowUp,
   Pause,
   PencilSimple,
   Play,
@@ -54,13 +57,28 @@ type ScriptVoiceProfile = {
 };
 
 type AiProviderStatus = {
+  isAuthenticated: boolean;
   providers: Array<{ provider: Exclude<AiProvider, "auto">; label: string; model: string }>;
   hasFirecrawl: boolean;
 };
 
 type VoiceStatus = {
+  isAuthenticated: boolean;
   isConfigured: boolean;
   provider: string;
+};
+
+type UserApiKeyService = "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs";
+
+type UserApiKeyStatus = {
+  isAuthenticated: boolean;
+  keys: Array<{
+    service: UserApiKeyService;
+    isConfigured: boolean;
+    model: string | null;
+    siteUrl: string | null;
+    appName: string | null;
+  }>;
 };
 
 type PromptSettings = {
@@ -74,6 +92,29 @@ type PromptSettings = {
   textColor: TextColor;
   fontFamily: PromptFont;
   layoutMode: LayoutMode;
+};
+type ShortcutEventLike = {
+  key: string;
+  code?: string;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  shiftKey?: boolean;
+  altKey?: boolean;
+  target?: EventTarget | null;
+  targetTag?: string;
+  preventDefault: () => void;
+};
+type MiniViewFrame = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+type MiniViewInteraction = {
+  mode: "move" | "resize";
+  startClientX: number;
+  startClientY: number;
+  startFrame: MiniViewFrame;
 };
 
 const DEFAULT_SCRIPT = `Hello everyone, and welcome to our channel!
@@ -96,6 +137,39 @@ const DEFAULT_SETTINGS: PromptSettings = {
   textColor: "white",
   fontFamily: "system",
   layoutMode: "left",
+};
+const MINI_VIEW_MIN_WIDTH = 360;
+const MINI_VIEW_MIN_HEIGHT = 240;
+const MINI_VIEW_MARGIN = 12;
+
+const getDefaultMiniViewFrame = (): MiniViewFrame => {
+  const viewportWidth = typeof window === "undefined" ? 1280 : window.innerWidth;
+  const viewportHeight = typeof window === "undefined" ? 800 : window.innerHeight;
+  const width = Math.min(620, Math.max(MINI_VIEW_MIN_WIDTH, viewportWidth - MINI_VIEW_MARGIN * 2));
+  const height = Math.min(380, Math.max(MINI_VIEW_MIN_HEIGHT, viewportHeight - MINI_VIEW_MARGIN * 2));
+
+  return {
+    width,
+    height,
+    x: Math.max(MINI_VIEW_MARGIN, viewportWidth - width - 88),
+    y: Math.max(MINI_VIEW_MARGIN, 88),
+  };
+};
+
+const clampMiniViewFrame = (frame: MiniViewFrame): MiniViewFrame => {
+  const viewportWidth = typeof window === "undefined" ? 1280 : window.innerWidth;
+  const viewportHeight = typeof window === "undefined" ? 800 : window.innerHeight;
+  const maxWidth = Math.max(MINI_VIEW_MIN_WIDTH, viewportWidth - MINI_VIEW_MARGIN * 2);
+  const maxHeight = Math.max(MINI_VIEW_MIN_HEIGHT, viewportHeight - MINI_VIEW_MARGIN * 2);
+  const width = clamp(frame.width, Math.min(MINI_VIEW_MIN_WIDTH, maxWidth), maxWidth);
+  const height = clamp(frame.height, Math.min(MINI_VIEW_MIN_HEIGHT, maxHeight), maxHeight);
+
+  return {
+    width,
+    height,
+    x: clamp(frame.x, MINI_VIEW_MARGIN, Math.max(MINI_VIEW_MARGIN, viewportWidth - width - MINI_VIEW_MARGIN)),
+    y: clamp(frame.y, MINI_VIEW_MARGIN, Math.max(MINI_VIEW_MARGIN, viewportHeight - height - MINI_VIEW_MARGIN)),
+  };
 };
 
 const SPEED_MULTIPLIERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
@@ -131,20 +205,14 @@ const AI_LENGTH_OPTIONS: Array<SelectOption<AiLength>> = [
   { value: "long", label: "5+ min" },
   { value: "open", label: "Open" },
 ];
+const API_KEY_SERVICE_OPTIONS: Array<SelectOption<UserApiKeyService>> = [
+  { value: "openai", label: "OpenAI" },
+  { value: "claude", label: "Claude" },
+  { value: "openrouter", label: "OpenRouter" },
+  { value: "firecrawl", label: "Firecrawl" },
+  { value: "elevenlabs", label: "ElevenLabs" },
+];
 const BUILT_IN_SCRIPT_VOICES: ScriptVoiceProfile[] = [
-  {
-    id: "builtin-waynesutton",
-    name: "WayneSutton.ai",
-    audience: "Builders, founders, creators, and operators who want practical direction.",
-    tone: "Direct, practical, founder/operator voice. Strong point of view without hype.",
-    pacing: "Short spoken sentences. Natural transitions. Explain what matters and why.",
-    bannedWords: "No generic AI phrases, over-polished corporate language, or empty hype.",
-    preferredPhrases: "Use specific claims, useful framing, and clear next steps.",
-    examples: "Write like a person preparing to speak on camera, not like a blog post.",
-    structure: "Open with the point, give the useful context, make the recommendation, close cleanly.",
-    defaultLength: "short",
-    source: "builtin",
-  },
   {
     id: "builtin-natural",
     name: "Teleprompter Natural",
@@ -241,12 +309,14 @@ const ABOUT_FEATURES = [
   ["Script editor", "Write, preview, format, save, load, export, and organize scripts."],
   ["Presentation defaults", "Save preferred font, color, layout, guide, and speed settings."],
   ["Keyboard control", "Use shortcuts for playback, tabs, pages, sizing, speed, help, and undo."],
+  ["Mini view", "Open a synced popup prompter for a compact recording view while keeping keyboard controls active."],
   ["Optional tools", "AI script generation and voice controls appear when the site owner configures them."],
   ["Open source", "The project is open source at github.com/waynesutton/teleprompter."],
 ] as const;
 
 const APP_DOCS = [
   ["Tab 1 Prompter", "Read the current script live. Use Start, speed, page controls, fit, guide, mirror, RSVP, and the hide-bar control for recording."],
+  ["Mini View", "Use the monitor icon on Tab 1 to open a compact movable prompter. It follows the active page, scroll/RSVP mode, playback state, and keyboard shortcuts."],
   ["Tab 2 Script", "Write or paste the source script, preview formatting, add page breaks, save scripts into folders, and generate scripts when AI is configured."],
   ["Tab 3 Help", "Set defaults, review shortcuts, read app docs, and check the open source feature list."],
   ["Script Voice Profiles", "Choose a writing tone for AI-generated scripts. Built-in profiles work immediately, and custom profiles can be saved, edited, deleted, or imported from notes."],
@@ -263,6 +333,7 @@ const SHORTCUTS = [
   ["Command/Ctrl + 2", "Open Tab 2 Script"],
   ["Command/Ctrl + 3", "Open Tab 3 Help"],
   ["Command/Ctrl + Z", "Undo the last script tool change on Tab 2"],
+  ["M", "Open or focus the mini prompter view"],
   ["H or B", "Show or hide the Tab 1 control bar"],
   ["C", "Show or hide the countdown counter"],
   ["V", "Switch between scroll and RSVP reading"],
@@ -395,6 +466,67 @@ const renderInlineFormatting = (line: string) => {
   return parts.length > 0 ? parts : line;
 };
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const renderMiniRsvpWordHtml = (word: string) => {
+  const leading = word.match(/^[^\p{L}\p{N}]+/u)?.[0] ?? "";
+  const trailing = word.match(/[^\p{L}\p{N}]+$/u)?.[0] ?? "";
+  const core = word.slice(leading.length, word.length - trailing.length);
+  const pivotIndex = clamp(getOrpIndex(word), 0, Math.max(0, core.length - 1));
+
+  if (!core) {
+    return escapeHtml(word);
+  }
+
+  return [
+    `<span class="mini-rsvp-before">${escapeHtml(leading + core.slice(0, pivotIndex))}</span>`,
+    `<span class="mini-rsvp-pivot">${escapeHtml(core[pivotIndex] ?? "")}</span>`,
+    `<span class="mini-rsvp-after">${escapeHtml(core.slice(pivotIndex + 1) + trailing)}</span>`,
+  ].join("");
+};
+
+const renderMiniLineHtml = (line: string) => {
+  const parts: string[] = [];
+  const pattern = /(<span data-color="(red|yellow|grey|darkgrey)">([^<]*)<\/span>|\*\*([^*]+)\*\*)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(escapeHtml(line.slice(lastIndex, match.index)));
+    }
+
+    if (match[2] && match[3]) {
+      parts.push(`<span class="mini-inline-${match[2]}">${escapeHtml(match[3])}</span>`);
+    } else if (match[4]) {
+      parts.push(`<strong>${escapeHtml(match[4])}</strong>`);
+    }
+
+    lastIndex = pattern.lastIndex;
+  }
+
+  if (lastIndex < line.length) {
+    parts.push(escapeHtml(line.slice(lastIndex)));
+  }
+
+  return parts.join("") || "&nbsp;";
+};
+
+const renderMiniScriptHtml = (script: string) =>
+  script
+    .split("\n")
+    .map((line) => {
+      const className = line.trim().startsWith("[") ? "mini-line is-direction" : "mini-line";
+      return `<p class="${className}">${renderMiniLineHtml(line)}</p>`;
+    })
+    .join("");
+
 function CustomSelect<Value extends string>({
   ariaLabel,
   buttonClassName = "",
@@ -471,17 +603,24 @@ function CustomSelect<Value extends string>({
 }
 
 function App() {
+  const authState = useConvexAuth();
+  const { signIn, signOut } = useAuthActions();
+  const isAuthenticated = authState.isAuthenticated;
   const savedPrompt = useQuery(api.teleprompter.getCurrent);
   const savedDefaultSettings = useQuery(api.teleprompter.getDefaultSettings);
   const savedScriptsQuery = useQuery(api.teleprompter.listSavedScripts);
   const savedScriptVoiceProfilesQuery = useQuery(api.scriptVoices.list);
+  const viewer = useQuery(api.users.getViewer);
+  const apiKeyStatus = useQuery(api.userApiKeys.getStatus) as UserApiKeyStatus | undefined;
   const getAiProviderStatus = useAction(api.aiScripts.getAiProviderStatus);
   const generateAiScript = useAction(api.aiScripts.generateScript);
   const rewriteScriptForRsvp = useAction(api.aiScripts.rewriteForRsvp);
   const getVoiceStatus = useAction(api.voice.getVoiceStatus);
+  const saveUserApiKey = useAction(api.apiKeyActions.save);
   const saveSharedScript = useMutation(api.teleprompter.saveSharedScript);
   const saveDefaultSettings = useMutation(api.teleprompter.saveDefaultSettings);
   const deleteSharedScript = useMutation(api.teleprompter.deleteSharedScript);
+  const removeUserApiKey = useMutation(api.userApiKeys.remove);
   const saveScriptVoiceProfile = useMutation(api.scriptVoices.save);
   const deleteScriptVoiceProfile = useMutation(api.scriptVoices.remove);
   const [activeTab, setActiveTab] = useState<PromptTab>("prompter");
@@ -511,6 +650,8 @@ function App() {
   const [isSavingDefaults, setIsSavingDefaults] = useState(false);
   const [isDeletingScript, setIsDeletingScript] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [isLoginRequiredModalOpen, setIsLoginRequiredModalOpen] = useState(false);
+  const [loginRequiredMessage, setLoginRequiredMessage] = useState("Sign in with GitHub to use this feature.");
   const [isNewScriptDialogOpen, setIsNewScriptDialogOpen] = useState(false);
   const [isScriptPreviewOpen, setIsScriptPreviewOpen] = useState(false);
   const [isAiGeneratorOpen, setIsAiGeneratorOpen] = useState(false);
@@ -520,11 +661,19 @@ function App() {
   const [aiProviderStatus, setAiProviderStatus] = useState<AiProviderStatus | null>(null);
   const [aiProvider, setAiProvider] = useState<AiProvider>("auto");
   const [aiLength, setAiLength] = useState<AiLength>("short");
-  const [selectedScriptVoiceId, setSelectedScriptVoiceId] = useState("builtin-waynesutton");
+  const [selectedScriptVoiceId, setSelectedScriptVoiceId] = useState("builtin-natural");
   const [scriptVoiceForm, setScriptVoiceForm] = useState(EMPTY_SCRIPT_VOICE_FORM);
   const [scriptVoiceMessage, setScriptVoiceMessage] = useState<string | null>(null);
   const [isSavingScriptVoice, setIsSavingScriptVoice] = useState(false);
   const [isDeletingScriptVoice, setIsDeletingScriptVoice] = useState(false);
+  const [apiKeyService, setApiKeyService] = useState<UserApiKeyService>("openai");
+  const [apiKeyValue, setApiKeyValue] = useState("");
+  const [apiKeyModel, setApiKeyModel] = useState("");
+  const [apiKeySiteUrl, setApiKeySiteUrl] = useState("");
+  const [apiKeyAppName, setApiKeyAppName] = useState("");
+  const [apiKeyMessage, setApiKeyMessage] = useState<string | null>(null);
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+  const [isRemovingApiKey, setIsRemovingApiKey] = useState(false);
   const [aiModelOverride, setAiModelOverride] = useState("");
   const [aiInstructions, setAiInstructions] = useState("");
   const [aiMessage, setAiMessage] = useState<string | null>(null);
@@ -533,8 +682,12 @@ function App() {
   const [isCheckingVoiceStatus, setIsCheckingVoiceStatus] = useState(false);
   const [isVoiceModeRequested, setIsVoiceModeRequested] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
+  const [isMiniViewOpen, setIsMiniViewOpen] = useState(false);
+  const [miniViewFrame, setMiniViewFrame] = useState<MiniViewFrame>(() => getDefaultMiniViewFrame());
   const scriptRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const miniStageRef = useRef<HTMLElement>(null);
+  const miniViewInteractionRef = useRef<MiniViewInteraction | null>(null);
   const frameRef = useRef<number | null>(null);
   const lastFrameAtRef = useRef<number | null>(null);
   const rsvpFrameRef = useRef<number | null>(null);
@@ -612,6 +765,11 @@ function App() {
   const currentRsvpWord = rsvpWords[rsvpWordIndex] ?? "";
   const rsvpProgress = rsvpWords.length > 0 ? ((rsvpWordIndex + 1) / rsvpWords.length) * 100 : 0;
   const effectiveSpeed = settings.speed * settings.speedMultiplier;
+  const estimatedReadTime = useMemo(() => {
+    const wordCount = currentScript.trim().split(/\s+/).filter(Boolean).length;
+    const minutes = Math.max(1, Math.round(wordCount / 130));
+    return `${minutes} min`;
+  }, [currentScript]);
 
   const setDraftFromTool = useCallback((nextDraft: string) => {
     if (draft === nextDraft) {
@@ -883,13 +1041,108 @@ function App() {
     };
   }, [isRunning, readingMode, rsvpWpm, rsvpWords.length]);
 
+  const openMiniPrompterWindow = useCallback(() => {
+    setMiniViewFrame((current) => clampMiniViewFrame(current));
+    setIsMiniViewOpen(true);
+  }, []);
+
+  const beginMiniViewInteraction = useCallback((mode: MiniViewInteraction["mode"], event: ReactPointerEvent<HTMLElement>) => {
+    event.preventDefault();
+    miniViewInteractionRef.current = {
+      mode,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startFrame: miniViewFrame,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }, [miniViewFrame]);
+
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const isShortcutHelpCombo = (event.metaKey || event.ctrlKey) && (event.key === "?" || (event.key === "/" && event.shiftKey));
+    if (!isMiniViewOpen) {
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const interaction = miniViewInteractionRef.current;
+      if (!interaction) {
+        return;
+      }
+
+      const deltaX = event.clientX - interaction.startClientX;
+      const deltaY = event.clientY - interaction.startClientY;
+
+      setMiniViewFrame(
+        clampMiniViewFrame(
+          interaction.mode === "move"
+            ? {
+                ...interaction.startFrame,
+                x: interaction.startFrame.x + deltaX,
+                y: interaction.startFrame.y + deltaY,
+              }
+            : {
+                ...interaction.startFrame,
+                width: interaction.startFrame.width + deltaX,
+                height: interaction.startFrame.height + deltaY,
+              },
+        ),
+      );
+    };
+
+    const endInteraction = () => {
+      miniViewInteractionRef.current = null;
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", endInteraction);
+    window.addEventListener("pointercancel", endInteraction);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", endInteraction);
+      window.removeEventListener("pointercancel", endInteraction);
+    };
+  }, [isMiniViewOpen]);
+
+  useEffect(() => {
+    if (!isMiniViewOpen) {
+      return;
+    }
+
+    const keepMiniViewInViewport = () => {
+      setMiniViewFrame((current) => clampMiniViewFrame(current));
+    };
+
+    window.addEventListener("resize", keepMiniViewInViewport);
+    return () => window.removeEventListener("resize", keepMiniViewInViewport);
+  }, [isMiniViewOpen]);
+
+  useEffect(() => {
+    if (!isMiniViewOpen || readingMode !== "scroll") {
+      return;
+    }
+
+    const element = miniStageRef.current;
+    if (!element) {
+      return;
+    }
+
+    element.scrollTop = (Math.max(0, element.scrollHeight - element.clientHeight) * settings.scroll) / 100;
+  }, [currentScript, isMiniViewOpen, miniViewFrame.height, miniViewFrame.width, readingMode, settings.fontSize, settings.scroll]);
+
+  const handlePrompterShortcut = useCallback((event: ShortcutEventLike) => {
+    const key = event.key;
+    const keyLower = key.toLowerCase();
+    const isShortcutHelpCombo = (event.metaKey || event.ctrlKey) && (key === "?" || (key === "/" && event.shiftKey));
 
       if (isShortcutHelpCombo) {
         event.preventDefault();
         setIsShortcutsModalOpen(true);
+        return;
+      }
+
+      if (event.key === "Escape" && isMiniViewOpen) {
+        event.preventDefault();
+        setIsMiniViewOpen(false);
         return;
       }
 
@@ -902,6 +1155,12 @@ function App() {
       if (event.key === "Escape" && isNewScriptDialogOpen) {
         event.preventDefault();
         setIsNewScriptDialogOpen(false);
+        return;
+      }
+
+      if (event.key === "Escape" && isLoginRequiredModalOpen) {
+        event.preventDefault();
+        setIsLoginRequiredModalOpen(false);
         return;
       }
 
@@ -938,14 +1197,15 @@ function App() {
           return;
         }
 
-        if (event.key.toLowerCase() === "z" && activeTab === "script" && draftUndoStack.length > 0) {
+        if (keyLower === "z" && activeTab === "script" && draftUndoStack.length > 0) {
           event.preventDefault();
           undoScriptDraftChange();
           return;
         }
       }
 
-      if (event.target instanceof HTMLElement && ["TEXTAREA", "INPUT", "SELECT"].includes(event.target.tagName)) {
+      const targetTag = event.targetTag ?? (event.target instanceof HTMLElement ? event.target.tagName : "");
+      if (["TEXTAREA", "INPUT", "SELECT"].includes(targetTag)) {
         return;
       }
 
@@ -956,85 +1216,90 @@ function App() {
         }
       }
 
-      if (event.key === "Escape" || event.key.toLowerCase() === "s") {
+      if (key === "Escape" || keyLower === "s") {
         event.preventDefault();
         resetScroll();
       }
 
-      if (event.key.toLowerCase() === "r") {
+      if (keyLower === "r") {
         resetScroll();
       }
 
-      if (event.key.toLowerCase() === "b" || event.key.toLowerCase() === "h") {
+      if (keyLower === "m") {
+        event.preventDefault();
+        openMiniPrompterWindow();
+      }
+
+      if (keyLower === "b" || keyLower === "h") {
         setIsPrompterDockVisible((current) => !current);
       }
 
-      if (event.key.toLowerCase() === "c") {
+      if (keyLower === "c") {
         setIsStageMeterVisible((current) => !current);
       }
 
-      if (event.key.toLowerCase() === "v") {
+      if (keyLower === "v") {
         event.preventDefault();
         setIsRunning(false);
         setReadingMode((current) => (current === "scroll" ? "rsvp" : "scroll"));
       }
 
-      if (event.key === "+" || event.key === "=") {
+      if (key === "+" || key === "=") {
         event.preventDefault();
         changeFontSize(4);
       }
 
-      if (event.key === "-") {
+      if (key === "-") {
         event.preventDefault();
         changeFontSize(-4);
       }
 
-      if (event.key === "]") {
+      if (key === "]") {
         event.preventDefault();
         changeSpeed(6);
       }
 
-      if (event.key === "[") {
+      if (key === "[") {
         event.preventDefault();
         changeSpeed(-6);
       }
 
-      if (event.key === "PageDown" || event.key === "ArrowRight") {
+      if (key === "PageDown" || key === "ArrowRight") {
         event.preventDefault();
         goToNextPage();
       }
 
-      if (event.key === "PageUp" || event.key === "ArrowLeft") {
+      if (key === "PageUp" || key === "ArrowLeft") {
         event.preventDefault();
         goToPreviousPage();
       }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
+    activeTab,
     changeFontSize,
     changeSpeed,
-    activeTab,
     draftUndoStack.length,
     goToNextPage,
     goToPreviousPage,
     isAiGeneratorOpen,
     isAiSetupModalOpen,
+    isLoginRequiredModalOpen,
+    isMiniViewOpen,
     isNewScriptDialogOpen,
-    readingMode,
     isShortcutsModalOpen,
     isVoiceModalOpen,
+    openMiniPrompterWindow,
+    readingMode,
     resetScroll,
     rsvpWords.length,
     undoScriptDraftChange,
   ]);
 
-  const estimatedReadTime = useMemo(() => {
-    const wordCount = currentScript.trim().split(/\s+/).filter(Boolean).length;
-    const minutes = Math.max(1, Math.round(wordCount / 130));
-    return `${minutes} min`;
-  }, [currentScript]);
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => handlePrompterShortcut(event);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handlePrompterShortcut]);
 
   const selectedSavedScript = useMemo(
     () => savedScripts.find((script) => script._id === selectedSavedScriptId),
@@ -1069,6 +1334,10 @@ function App() {
   }, [resetScroll, setDraftFromTool]);
 
   const saveScriptToLibrary = async () => {
+    if (!requireLogin("Sign in with GitHub to save scripts to your library.")) {
+      return false;
+    }
+
     const script = draft.trim();
     const title = scriptTitle.trim() || getDefaultScriptTitle(draft);
     const folder = scriptFolder.trim();
@@ -1139,6 +1408,10 @@ function App() {
     const source = draft.trim();
     setAiMessage(null);
 
+    if (!requireLogin("Sign in with GitHub and add your API keys to generate scripts.")) {
+      return;
+    }
+
     if (!source) {
       setAiMessage("Add a topic, notes, URL, or markdown link before generating.");
       return;
@@ -1153,7 +1426,11 @@ function App() {
       setAiProviderStatus(nextStatus);
 
       if (nextStatus.providers.length === 0 || (hasUrl && !nextStatus.hasFirecrawl)) {
-        setAiSetupMessage("These options are not setup. Contact the app creator to config.");
+        setAiSetupMessage(
+          hasUrl && !nextStatus.hasFirecrawl
+            ? "Add your Firecrawl API key in Script generator settings before generating from a URL."
+            : "Add an OpenAI, Claude, or OpenRouter API key in Script generator settings.",
+        );
         setIsAiSetupModalOpen(true);
         return;
       }
@@ -1165,6 +1442,12 @@ function App() {
   };
 
   const openVoiceModal = async () => {
+    if (!isAuthenticated) {
+      setLoginRequiredMessage("Sign in with GitHub to configure and use voice controls.");
+      setIsLoginRequiredModalOpen(true);
+      return;
+    }
+
     setIsCheckingVoiceStatus(true);
 
     try {
@@ -1173,6 +1456,62 @@ function App() {
       setIsVoiceModalOpen(true);
     } finally {
       setIsCheckingVoiceStatus(false);
+    }
+  };
+
+  const requireLogin = (message: string) => {
+    if (isAuthenticated) {
+      return true;
+    }
+
+    setLoginRequiredMessage(message);
+    setIsLoginRequiredModalOpen(true);
+    return false;
+  };
+
+  const signInWithGitHub = () => {
+    void signIn("github", { redirectTo: window.location.pathname || "/" });
+  };
+
+  const saveSelectedApiKey = async () => {
+    if (!requireLogin("Sign in with GitHub to save your API keys.")) {
+      return;
+    }
+
+    setApiKeyMessage(null);
+    setIsSavingApiKey(true);
+
+    try {
+      const result = await saveUserApiKey({
+        service: apiKeyService,
+        apiKey: apiKeyValue,
+        model: apiKeyModel.trim() || undefined,
+        siteUrl: apiKeySiteUrl.trim() || undefined,
+        appName: apiKeyAppName.trim() || undefined,
+      });
+      setApiKeyMessage(result.message);
+
+      if (result.ok) {
+        setApiKeyValue("");
+      }
+    } finally {
+      setIsSavingApiKey(false);
+    }
+  };
+
+  const removeSelectedApiKey = async () => {
+    if (!requireLogin("Sign in with GitHub to remove your API keys.")) {
+      return;
+    }
+
+    setApiKeyMessage(null);
+    setIsRemovingApiKey(true);
+
+    try {
+      const didRemove = await removeUserApiKey({ service: apiKeyService });
+      setApiKeyMessage(didRemove ? "API key removed." : "No saved API key found for that service.");
+    } finally {
+      setIsRemovingApiKey(false);
     }
   };
 
@@ -1197,6 +1536,10 @@ function App() {
   };
 
   const saveCustomScriptVoice = async () => {
+    if (!requireLogin("Sign in with GitHub to save custom Script Voice Profiles.")) {
+      return;
+    }
+
     const name = scriptVoiceForm.name.trim();
     const tone = scriptVoiceForm.tone.trim();
 
@@ -1228,6 +1571,10 @@ function App() {
   };
 
   const deleteSelectedScriptVoice = async () => {
+    if (!requireLogin("Sign in with GitHub to delete custom Script Voice Profiles.")) {
+      return;
+    }
+
     if (!selectedScriptVoiceId.startsWith("custom:")) {
       setScriptVoiceMessage("Built-in script voices cannot be deleted.");
       return;
@@ -1244,7 +1591,7 @@ function App() {
         return;
       }
 
-      setSelectedScriptVoiceId("builtin-waynesutton");
+      setSelectedScriptVoiceId("builtin-natural");
       setScriptVoiceMessage("Custom script voice deleted.");
     } finally {
       setIsDeletingScriptVoice(false);
@@ -1311,6 +1658,10 @@ function App() {
     const source = draft.trim();
     setRsvpMessage(null);
 
+    if (!requireLogin("Sign in with GitHub and add your API keys to use AI RSVP rewrite.")) {
+      return;
+    }
+
     if (!source) {
       setRsvpMessage("Add script text before using the RSVP rewrite.");
       return;
@@ -1356,6 +1707,10 @@ function App() {
   };
 
   const loadSelectedScript = () => {
+    if (!requireLogin("Sign in with GitHub to load scripts from your library.")) {
+      return;
+    }
+
     if (!selectedSavedScript) {
       setLibraryMessage("Choose a saved script to load.");
       return;
@@ -1417,6 +1772,10 @@ function App() {
   };
 
   const saveCurrentDefaults = async () => {
+    if (!requireLogin("Sign in with GitHub to save your default settings.")) {
+      return;
+    }
+
     const savedAt = Date.now();
     setIsSavingDefaults(true);
 
@@ -1439,6 +1798,10 @@ function App() {
   };
 
   const requestDeleteSelectedScript = () => {
+    if (!requireLogin("Sign in with GitHub to delete scripts from your library.")) {
+      return;
+    }
+
     if (!selectedSavedScript) {
       setDeleteMessage("Choose a saved script before deleting.");
       return;
@@ -1489,17 +1852,30 @@ function App() {
       aria-label="Teleprompter tabs"
     >
       {activeTab === "prompter" ? (
-        <button
-          className={isPrompterDockVisible ? "tab-dock-toggle has-tooltip" : "tab-dock-toggle has-tooltip is-active"}
-          type="button"
-          onClick={() => setIsPrompterDockVisible((current) => !current)}
-          aria-pressed={!isPrompterDockVisible}
-          aria-label={isPrompterDockVisible ? "Hide Tab 1 control bar" : "Show Tab 1 control bar"}
-          title={isPrompterDockVisible ? "Hide Tab 1 control bar" : "Show Tab 1 control bar"}
-          data-tooltip={isPrompterDockVisible ? "Hide bar" : "Show bar"}
-        >
-          <Layout size={17} weight="bold" />
-        </button>
+        <div className="tab-side-actions" aria-label="Prompter view controls">
+          <button
+            className={isPrompterDockVisible ? "tab-dock-toggle has-tooltip" : "tab-dock-toggle has-tooltip is-active"}
+            type="button"
+            onClick={() => setIsPrompterDockVisible((current) => !current)}
+            aria-pressed={!isPrompterDockVisible}
+            aria-label={isPrompterDockVisible ? "Hide Tab 1 control bar" : "Show Tab 1 control bar"}
+            title={isPrompterDockVisible ? "Hide Tab 1 control bar" : "Show Tab 1 control bar"}
+            data-tooltip={isPrompterDockVisible ? "Hide bar" : "Show bar"}
+          >
+            <Layout size={17} weight="bold" />
+          </button>
+          <button
+            className={isMiniViewOpen ? "tab-dock-toggle has-tooltip is-active" : "tab-dock-toggle has-tooltip"}
+            type="button"
+            onClick={openMiniPrompterWindow}
+            aria-pressed={isMiniViewOpen}
+            aria-label="Open mini prompter view"
+            title="Open mini prompter view"
+            data-tooltip="Mini view"
+          >
+            <MonitorArrowUp size={17} weight="bold" />
+          </button>
+        </div>
       ) : null}
       <div className="tab-list">
         <button
@@ -1511,7 +1887,7 @@ function App() {
           type="button"
         >
           <List size={16} weight="bold" />
-          <span>Tab 1 Prompter</span>
+          <span>Prompter</span>
         </button>
         <button
           className={activeTab === "script" ? "tab has-tooltip is-active" : "tab has-tooltip"}
@@ -1522,7 +1898,7 @@ function App() {
           type="button"
         >
           <Article size={16} weight="bold" />
-          <span>Tab 2 Script</span>
+          <span>Script</span>
         </button>
         <button
           className={activeTab === "help" ? "tab has-tooltip is-active" : "tab has-tooltip"}
@@ -1533,8 +1909,33 @@ function App() {
           type="button"
         >
           <Question size={16} weight="bold" />
-          <span>Tab 3 Help</span>
+          <span>Help</span>
         </button>
+        {isAuthenticated ? (
+          <button
+            className="tab account-tab has-tooltip"
+            type="button"
+            onClick={() => void signOut()}
+            title={`Signed in as ${viewer?.name ?? viewer?.email ?? "GitHub user"}. Click to sign out.`}
+            data-tooltip="Sign out"
+            aria-label={`Signed in as ${viewer?.name ?? viewer?.email ?? "GitHub user"}. Sign out.`}
+          >
+            <GithubLogo size={16} weight="bold" />
+            <span>{viewer?.name ?? viewer?.email ?? "Account"}</span>
+          </button>
+        ) : (
+          <button
+            className="tab account-tab has-tooltip"
+            type="button"
+            onClick={signInWithGitHub}
+            title="Sign in with GitHub"
+            data-tooltip="Sign in"
+            aria-label="Sign in with GitHub"
+          >
+            <GithubLogo size={16} weight="bold" />
+            <span>Sign in</span>
+          </button>
+        )}
       </div>
     </nav>
   );
@@ -1989,6 +2390,7 @@ function App() {
               <div>
                 <p className="eyebrow">Script generator</p>
                 <h2>Turn a topic, notes, URL, or markdown link into a prompt-ready script.</h2>
+                <p className="panel-copy">Sign in to use your own AI, Firecrawl, and voice keys. Logged-out prompting still works without AI.</p>
               </div>
               <button
                 className="save-button has-tooltip is-primary-action"
@@ -2002,12 +2404,111 @@ function App() {
                 {isCheckingAiSetup ? "Checking" : "Generate Script"}
               </button>
             </div>
+            <div className="api-settings-panel" aria-label="Script generator settings">
+              <div className="api-settings-header">
+                <div>
+                  <p className="eyebrow">Script generator settings</p>
+                  <h2>Bring your own keys.</h2>
+                </div>
+                {!isAuthenticated ? (
+                  <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
+                    <GithubLogo size={17} weight="bold" />
+                    Sign in
+                  </button>
+                ) : null}
+              </div>
+              <div className="api-key-status-list" aria-label="API key status">
+                {(apiKeyStatus?.keys ?? []).map((key) => (
+                  <span className={key.isConfigured ? "api-key-chip is-configured" : "api-key-chip"} key={key.service}>
+                    {API_KEY_SERVICE_OPTIONS.find((option) => option.value === key.service)?.label ?? key.service}
+                    {key.isConfigured ? " saved" : " missing"}
+                  </span>
+                ))}
+              </div>
+              {isAuthenticated ? (
+                <div className="api-key-grid">
+                  <div className="field-control">
+                    <span>Service</span>
+                    <CustomSelect
+                      ariaLabel="API key service"
+                      value={apiKeyService}
+                      options={API_KEY_SERVICE_OPTIONS}
+                      onChange={(value) => {
+                        setApiKeyService(value);
+                        const saved = apiKeyStatus?.keys.find((key) => key.service === value);
+                        setApiKeyModel(saved?.model ?? "");
+                        setApiKeySiteUrl(saved?.siteUrl ?? "");
+                        setApiKeyAppName(saved?.appName ?? "");
+                        setApiKeyMessage(null);
+                      }}
+                    />
+                  </div>
+                  <label className="field-control" htmlFor="api-key-value">
+                    <span>API key</span>
+                    <input
+                      id="api-key-value"
+                      type="password"
+                      value={apiKeyValue}
+                      onChange={(event) => setApiKeyValue(event.target.value)}
+                      placeholder="Paste key to save or replace"
+                    />
+                  </label>
+                  {apiKeyService === "openai" || apiKeyService === "claude" || apiKeyService === "openrouter" ? (
+                    <label className="field-control" htmlFor="api-key-model">
+                      <span>Model</span>
+                      <input
+                        id="api-key-model"
+                        type="text"
+                        value={apiKeyModel}
+                        onChange={(event) => setApiKeyModel(event.target.value)}
+                        placeholder={apiKeyService === "openai" ? "gpt-4.1-mini" : apiKeyService === "claude" ? "claude-3-5-sonnet-latest" : "openai/gpt-4.1-mini"}
+                      />
+                    </label>
+                  ) : null}
+                  {apiKeyService === "openrouter" ? (
+                    <>
+                      <label className="field-control" htmlFor="api-key-site-url">
+                        <span>Site URL</span>
+                        <input
+                          id="api-key-site-url"
+                          type="text"
+                          value={apiKeySiteUrl}
+                          onChange={(event) => setApiKeySiteUrl(event.target.value)}
+                          placeholder="https://fearless-dolphin-422.convex.site"
+                        />
+                      </label>
+                      <label className="field-control" htmlFor="api-key-app-name">
+                        <span>App name</span>
+                        <input
+                          id="api-key-app-name"
+                          type="text"
+                          value={apiKeyAppName}
+                          onChange={(event) => setApiKeyAppName(event.target.value)}
+                          placeholder="Teleprompt"
+                        />
+                      </label>
+                    </>
+                  ) : null}
+                  <button className="save-button" type="button" onClick={saveSelectedApiKey} disabled={isSavingApiKey}>
+                    <FloppyDisk size={17} weight="bold" />
+                    {isSavingApiKey ? "Saving" : "Save Key"}
+                  </button>
+                  <button className="danger-button" type="button" onClick={removeSelectedApiKey} disabled={isRemovingApiKey}>
+                    <Trash size={17} weight="bold" />
+                    {isRemovingApiKey ? "Removing" : "Remove Key"}
+                  </button>
+                </div>
+              ) : (
+                <p className="editor-note">Sign in to save provider keys. Raw keys are encrypted in Convex and never shown again.</p>
+              )}
+              {apiKeyMessage ? <p className="library-message">{apiKeyMessage}</p> : null}
+            </div>
             {aiMessage ? <p className="library-message">{aiMessage}</p> : null}
             <p className="editor-note">Use `---` on its own line to create pages. Selected color uses safe markdown-compatible span tags.</p>
             <div className="script-library" aria-label="Shared script library">
               <div>
-                <p className="eyebrow">Shared library</p>
-                <h2>Save and load scripts for all users.</h2>
+                <p className="eyebrow">Your library</p>
+                <h2>Save and load your scripts.</h2>
               </div>
               <div className="library-grid">
                 <label className="field-control" htmlFor="script-title">
@@ -2259,6 +2760,114 @@ function App() {
           {tabs}
         </>
       )}
+      {isMiniViewOpen ? (
+        <div
+          className="modal-scrim mini-view-scrim"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsMiniViewOpen(false);
+            }
+          }}
+        >
+          <section
+            className="mini-view-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mini prompter view"
+            style={{
+              height: `${miniViewFrame.height}px`,
+              left: `${miniViewFrame.x}px`,
+              top: `${miniViewFrame.y}px`,
+              width: `${miniViewFrame.width}px`,
+            }}
+          >
+            <div
+              className="mini-view-drag-handle"
+              title="Drag to move"
+              onPointerDown={(event) => beginMiniViewInteraction("move", event)}
+            >
+              <span />
+            </div>
+            <div className="mini-view-actions">
+              <button
+                className="mini-view-button has-tooltip"
+                type="button"
+                onClick={() => {
+                  if (readingMode !== "rsvp" || rsvpWords.length > 0) {
+                    setIsRunning((current) => !current);
+                  }
+                }}
+                aria-label={isRunning ? "Pause" : "Start"}
+                title={isRunning ? "Pause" : "Start"}
+                data-tooltip={isRunning ? "Pause" : "Start"}
+              >
+                {isRunning ? <Pause size={15} weight="fill" /> : <Play size={15} weight="fill" />}
+              </button>
+              <button
+                className="mini-view-button has-tooltip"
+                type="button"
+                onClick={() => setIsShortcutsModalOpen(true)}
+                aria-label="Open shortcuts"
+                title="Open shortcuts"
+                data-tooltip="Shortcuts"
+              >
+                <Question size={15} weight="bold" />
+              </button>
+              <button
+                className="mini-view-button has-tooltip"
+                type="button"
+                onClick={() => setIsMiniViewOpen(false)}
+                aria-label="Close mini view"
+                title="Close mini view"
+                data-tooltip="Close"
+                autoFocus
+              >
+                <X size={15} weight="bold" />
+              </button>
+            </div>
+            <section
+              ref={miniStageRef}
+              className={readingMode === "rsvp" ? "mini-view-stage is-rsvp" : "mini-view-stage"}
+              aria-label="Mini teleprompter text"
+            >
+              {readingMode === "rsvp" ? (
+                <div className="mini-view-content is-rsvp-word">
+                  {currentRsvpWord ? (
+                    <>
+                      <div className="mini-rsvp-word" dangerouslySetInnerHTML={{ __html: renderMiniRsvpWordHtml(currentRsvpWord) }} />
+                      <div className="mini-rsvp-meta">
+                        Word {Math.min(rsvpWordIndex + 1, rsvpWords.length).toLocaleString()} of {rsvpWords.length.toLocaleString()}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mini-rsvp-meta">Add script text on Tab 2 to use RSVP mode.</div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className={[
+                    "mini-view-content",
+                    `text-${settings.textColor}`,
+                    settings.layoutMode === "centered" ? "is-centered" : "",
+                    settings.mirrored ? "is-mirrored" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  style={{ fontSize: `${clamp(settings.fontSize * 0.66, 28, 76)}px` }}
+                  dangerouslySetInnerHTML={{ __html: renderMiniScriptHtml(currentScript) }}
+                />
+              )}
+            </section>
+            <div
+              className="mini-view-resize-handle"
+              aria-hidden="true"
+              title="Drag to resize"
+              onPointerDown={(event) => beginMiniViewInteraction("resize", event)}
+            />
+          </section>
+        </div>
+      ) : null}
       {isShortcutsModalOpen ? (
         <div
           className="modal-scrim"
@@ -2299,6 +2908,55 @@ function App() {
                   <span>{action}</span>
                 </div>
               ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {isLoginRequiredModalOpen ? (
+        <div
+          className="modal-scrim"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsLoginRequiredModalOpen(false);
+            }
+          }}
+        >
+          <section
+            className="confirm-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="login-required-title"
+            aria-describedby="login-required-copy"
+          >
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">GitHub login</p>
+                <h2 id="login-required-title">Sign in to continue</h2>
+              </div>
+              <button
+                className="icon-button has-tooltip"
+                type="button"
+                onClick={() => setIsLoginRequiredModalOpen(false)}
+                aria-label="Close login notice"
+                title="Close login notice"
+                data-tooltip="Close"
+                autoFocus
+              >
+                <X size={16} weight="bold" />
+              </button>
+            </div>
+            <p id="login-required-copy" className="modal-copy">
+              {loginRequiredMessage}
+            </p>
+            <div className="modal-actions">
+              <button className="save-button" type="button" onClick={() => setIsLoginRequiredModalOpen(false)}>
+                Cancel
+              </button>
+              <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
+                <GithubLogo size={17} weight="bold" />
+                Sign in with GitHub
+              </button>
             </div>
           </section>
         </div>
@@ -2479,7 +3137,7 @@ function App() {
                       type="text"
                       value={scriptVoiceForm.name}
                       onChange={(event) => setScriptVoiceForm((current) => ({ ...current, name: event.target.value }))}
-                      placeholder="WayneSutton.ai"
+                      placeholder="My founder voice"
                     />
                   </label>
                   <label className="field-control" htmlFor="voice-profile-audience">
