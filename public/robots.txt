@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://fearless-dolphin-422.convex.site/sitemap.xml
+Sitemap: https://befitting-dodo-95.convex.site/sitemap.xml

@@ -95,6 +95,13 @@ type BuildItem = {
   sourceText?: string;
   scriptSnapshot?: string;
   videoBrief?: string;
+  transcriptText?: string;
+  editPlan?: string;
+  edlJson?: string;
+  subtitleStyle?: string;
+  renderChecklist?: string;
+  projectMemory?: string;
+  outputFormat?: string;
   notes?: string;
   createdAt: number;
   updatedAt: number;
@@ -258,8 +265,33 @@ const EMPTY_BUILD_FORM = {
   sourceText: "",
   scriptSnapshot: "",
   videoBrief: "",
+  transcriptText: "",
+  editPlan: "",
+  edlJson: "",
+  subtitleStyle: "",
+  renderChecklist: "",
+  projectMemory: "",
+  outputFormat: "1920x1080 landscape, 30fps",
   notes: "",
 };
+const VIDEO_OUTPUT_OPTIONS: Array<SelectOption<string>> = [
+  { value: "1920x1080 landscape, 30fps", label: "Landscape 1080p" },
+  { value: "1080x1920 vertical, 30fps", label: "Vertical 1080p" },
+  { value: "1080x1080 square, 30fps", label: "Square 1080p" },
+  { value: "3840x2160 landscape, 24fps", label: "4K landscape" },
+];
+const DEFAULT_RENDER_CHECKLIST = [
+  "[ ] Source clips or links added",
+  "[ ] Word-level transcript generated or imported",
+  "[ ] Strategy approved before editing",
+  "[ ] EDL JSON reviewed",
+  "[ ] Cut edges stay on word boundaries",
+  "[ ] 30ms audio fades planned at every cut",
+  "[ ] Subtitles applied last",
+  "[ ] Preview render reviewed",
+  "[ ] Final render ready for Mux or download",
+].join("\n");
+const DEFAULT_SUBTITLE_STYLE = "Natural sentence case, 4-7 words per line, bottom center, high contrast, subtitles applied last.";
 const MODEL_KEY_SERVICES = new Set<UserApiKeyService>(["openai", "claude", "openrouter", "mux"]);
 const SITE_APP_KEY_SERVICES = new Set<UserApiKeyService>(["openrouter", "mux"]);
 const API_KEY_HELP: Record<UserApiKeyService, { keyLabel: string; modelLabel: string; modelPlaceholder: string; siteLabel: string; appLabel: string; help: string }> = {
@@ -418,7 +450,8 @@ const ABOUT_FEATURES = [
   ["Presentation defaults", "Save preferred font, color, layout, guide, and speed settings."],
   ["Keyboard control", "Use shortcuts for playback, tabs, pages, sizing, speed, help, and undo."],
   ["Mini view", "Open a synced popup prompter for a compact recording view while keeping keyboard controls active."],
-  ["Optional tools", "AI script generation and voice controls appear when the site owner configures them."],
+  ["Build workspace", "Sign in to save scripts, videos, Build items, and Video Project Builder drafts. External keys are only needed for AI, URL scraping, transcription, narration, and rendering."],
+  ["Optional tools", "AI script generation, Firecrawl URL context, voice, transcription, and rendering depend on your saved provider keys or worker setup."],
   ["Open source", "The project is open source at github.com/waynesutton/teleprompter."],
 ] as const;
 
@@ -426,7 +459,7 @@ const APP_DOCS = [
   ["Prompter", "Read the current script live. Use Start, speed, page controls, fit, guide, mirror, RSVP, and the hide-bar control for recording."],
   ["Mini View", "Use the monitor icon on Tab 1 to open a compact movable prompter. It follows the active page, scroll/RSVP mode, playback state, and keyboard shortcuts."],
   ["Script", "Write or paste the source script, preview formatting, add page breaks, save scripts into folders, and export markdown."],
-  ["Build", "Generate scripts, manage BYOK provider setup, and plan video builds from links, docs, scripts, or prompts after signing in."],
+  ["Build", "Sign in to save scripts, videos, and Video Project Builder drafts. Manual planning uses your pasted script text; URL scraping needs Firecrawl, AI assistance needs OpenAI, Claude, or OpenRouter, transcription needs a speech-to-text provider, and final video rendering needs an external worker/provider."],
   ["Help", "Set defaults, review shortcuts, read app docs, and check the open source feature list."],
   ["Script Voice Profiles", "Choose a writing tone for AI-generated scripts. Built-in profiles work immediately, and custom profiles can be saved, edited, deleted, or imported from notes."],
   ["Narration Voice", "Audio narration is separate from script writing tone. It only becomes usable when your ElevenLabs key is saved."],
@@ -437,9 +470,10 @@ const APP_DOCS = [
 const VIDEO_WORKFLOW_STEPS = [
   ["1. Gather", "Start from a link, markdown doc, pasted notes, saved script, or prompt. Firecrawl handles URL context when your key is saved."],
   ["2. Shape", "Use Script Voice Profiles to turn source material into a spoken script, outline, shot list, and caption-ready beats."],
-  ["3. Compose", "Use HyperFrames for deterministic HTML-to-video compositions, or Remotion when you need React-based rendering and cloud workers."],
-  ["4. Store", "Use R2 for large render artifacts and Mux for upload, playback IDs, webhooks, thumbnails, and delivery."],
-  ["5. Review", "Track jobs in Convex, show status in real time, then send the finished script back to Prompter or save the video result."],
+  ["3. Plan", "Draft a transcript-first video project with an edit strategy, EDL JSON, subtitle style, render checklist, and persistent project memory."],
+  ["4. Compose", "Use HyperFrames for deterministic HTML-to-video compositions, or Remotion when you need React-based rendering and cloud workers."],
+  ["5. Store", "Use R2 for large render artifacts and Mux for upload, playback IDs, webhooks, thumbnails, and delivery."],
+  ["6. Review", "Track jobs in Convex, show status in real time, then send the finished script back to Prompter or save the video result."],
 ] as const;
 
 const VIDEO_PROVIDER_GUIDE = [
@@ -448,6 +482,15 @@ const VIDEO_PROVIDER_GUIDE = [
   ["Remotion", "React-based video templates and cloud rendering on Lambda or Cloud Run."],
   ["Cloudflare R2", "Large render outputs, frame bundles, source captures, and downloads before sending final assets to Mux."],
   ["HeyGen", "Optional avatar or narration workflows. Keep it separate from the script-writing voice."],
+] as const;
+
+const BUILD_REQUIREMENT_GUIDE = [
+  ["Save scripts, videos, or both", "Requires GitHub login. Saved Build items are private to your account."],
+  ["Transcript to strategy to EDL", "Requires GitHub login to save. Drafting from pasted script text works without an AI key after login."],
+  ["URL or markdown-link context", "Requires GitHub login plus a saved Firecrawl API key."],
+  ["AI-assisted script, strategy, or EDL", "Requires GitHub login plus a saved OpenAI, Claude, or OpenRouter API key."],
+  ["Word-level transcription", "Requires GitHub login plus a transcription provider such as ElevenLabs Scribe or a worker-backed speech-to-text service."],
+  ["Final video rendering", "Requires an external worker/provider such as HyperFrames, Remotion, ffmpeg, R2, and Mux. The browser does not render final MP4 files."],
 ] as const;
 
 const SHORTCUTS = [
@@ -497,6 +540,88 @@ const getSafeMarkdownFileName = (title: string) => {
 
   return `${safeTitle || "teleprompter-script"}.md`;
 };
+
+const getVideoProjectTitle = (title: string, script: string) => title.trim() || getDefaultScriptTitle(script);
+
+const getVideoProjectTranscript = (title: string, script: string) => {
+  const lines = script
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => line !== "---");
+
+  if (!lines.length) {
+    return `# ${title}\n\nAdd source clips, links, or a transcript. Use word-level timestamps when transcription is connected.`;
+  }
+
+  return [
+    `# ${title}`,
+    "",
+    "## Source script reading view",
+    ...lines.slice(0, 12).map((line, index) => `[${String(index + 1).padStart(2, "0")}] ${line}`),
+    lines.length > 12 ? `\n${lines.length - 12} more lines remain in the full script.` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
+
+const getVideoProjectPlan = (title: string, outputFormat: string, sourceText: string, videoBrief: string) =>
+  [
+    `Strategy for ${title}`,
+    "",
+    `Output: ${outputFormat}`,
+    sourceText ? `Source: ${sourceText}` : "Source: current script or uploaded clips.",
+    videoBrief ? `Brief: ${videoBrief}` : "Brief: choose the strongest spoken beats, keep cuts on word boundaries, and build a concise reviewable edit.",
+    "",
+    "Workflow:",
+    "1. Inventory source clips, links, docs, or scripts.",
+    "2. Generate or import word-level transcript data.",
+    "3. Pack transcript into a reading view for take selection.",
+    "4. Confirm the edit strategy before rendering.",
+    "5. Produce EDL JSON, subtitle plan, and render checklist.",
+    "6. Render through a future worker using ffmpeg, Remotion, HyperFrames, R2, and Mux.",
+  ].join("\n");
+
+const getVideoProjectEdl = (title: string, outputFormat: string, script: string) => {
+  const firstQuote = cleanRsvpText(script).split(/\s+/).slice(0, 18).join(" ") || "Add source transcript text before selecting ranges.";
+
+  return JSON.stringify(
+    {
+      version: 1,
+      title,
+      output: outputFormat,
+      status: "strategy_draft",
+      sources: [],
+      ranges: [
+        {
+          source: "source-01",
+          start: 0,
+          end: 0,
+          beat: "HOOK",
+          quote: firstQuote,
+          reason: "Starter beat. Replace start/end after word-level transcript import.",
+        },
+      ],
+      subtitles: "planned",
+      overlays: [],
+      render: {
+        engine: "future-worker",
+        notes: "Use per-segment extract, 30ms audio fades, subtitles last, then publish final asset to Mux.",
+      },
+    },
+    null,
+    2,
+  );
+};
+
+const getVideoProjectMemory = (title: string) =>
+  [
+    `## Session 1 - ${new Date().toISOString().slice(0, 10)}`,
+    `**Project:** ${title}`,
+    "**Strategy:** Drafted a transcript-first video project workspace.",
+    "**Decisions:** Confirm strategy before rendering. Use transcript and EDL as the source of truth.",
+    "**Outstanding:** Add source clips, import word-level transcript data, review the EDL, then render with a worker.",
+  ].join("\n");
 
 const getFontClass = (fontFamily: PromptFont) => `font-${fontFamily}`;
 
@@ -1682,8 +1807,36 @@ function App() {
       title: nextTitle,
       scriptSnapshot: draft,
       sourceText: current.sourceText || nextTitle,
+      transcriptText: current.transcriptText || getVideoProjectTranscript(nextTitle, draft),
     }));
     setBuildMessage("Current script added to the Build form.");
+  };
+
+  const draftVideoProject = () => {
+    if (!requireLogin("Sign in with GitHub to draft and save Video Project Builder work.")) {
+      return;
+    }
+
+    const title = getVideoProjectTitle(buildForm.title || scriptTitle, buildForm.scriptSnapshot || draft);
+    const scriptSnapshot = buildForm.scriptSnapshot || draft;
+    const outputFormat = buildForm.outputFormat || EMPTY_BUILD_FORM.outputFormat;
+
+    setBuildForm((current) => ({
+      ...current,
+      kind: current.kind === "script" ? "both" : current.kind,
+      sourceType: current.sourceType || "script",
+      title,
+      scriptSnapshot,
+      outputFormat,
+      transcriptText: current.transcriptText || getVideoProjectTranscript(title, scriptSnapshot),
+      editPlan: getVideoProjectPlan(title, outputFormat, current.sourceText, current.videoBrief),
+      edlJson: current.edlJson || getVideoProjectEdl(title, outputFormat, scriptSnapshot),
+      subtitleStyle: current.subtitleStyle || DEFAULT_SUBTITLE_STYLE,
+      renderChecklist: current.renderChecklist || DEFAULT_RENDER_CHECKLIST,
+      projectMemory: current.projectMemory || getVideoProjectMemory(title),
+      notes: current.notes || "Video Project draft created. Confirm the strategy before any future render job.",
+    }));
+    setBuildMessage("Video Project draft created. Review the strategy and EDL before saving.");
   };
 
   const editBuildItem = (item: BuildItem) => {
@@ -1694,6 +1847,13 @@ function App() {
       sourceText: item.sourceText ?? "",
       scriptSnapshot: item.scriptSnapshot ?? "",
       videoBrief: item.videoBrief ?? "",
+      transcriptText: item.transcriptText ?? "",
+      editPlan: item.editPlan ?? "",
+      edlJson: item.edlJson ?? "",
+      subtitleStyle: item.subtitleStyle ?? "",
+      renderChecklist: item.renderChecklist ?? "",
+      projectMemory: item.projectMemory ?? "",
+      outputFormat: item.outputFormat ?? EMPTY_BUILD_FORM.outputFormat,
       notes: item.notes ?? "",
     });
     setEditingBuildItemId(item._id);
@@ -1725,6 +1885,13 @@ function App() {
         sourceText: buildForm.sourceText,
         scriptSnapshot,
         videoBrief: buildForm.videoBrief,
+        transcriptText: buildForm.transcriptText,
+        editPlan: buildForm.editPlan,
+        edlJson: buildForm.edlJson,
+        subtitleStyle: buildForm.subtitleStyle,
+        renderChecklist: buildForm.renderChecklist,
+        projectMemory: buildForm.projectMemory,
+        outputFormat: buildForm.outputFormat,
         notes: buildForm.notes,
         updatedAt: Date.now(),
       });
@@ -2895,7 +3062,7 @@ function App() {
                           type="text"
                           value={apiKeySiteUrl}
                           onChange={(event) => setApiKeySiteUrl(event.target.value)}
-                          placeholder={apiKeyService === "mux" ? "Mux webhook signing secret" : "https://fearless-dolphin-422.convex.site"}
+                          placeholder={apiKeyService === "mux" ? "Mux webhook signing secret" : "https://befitting-dodo-95.convex.site"}
                         />
                       </label>
                       <label className="field-control" htmlFor="api-key-app-name">
@@ -2931,7 +3098,7 @@ function App() {
                 <div>
                   <p className="eyebrow">Build library</p>
                   <h2>Save scripts, videos, or both.</h2>
-                  <p className="panel-copy">Create reusable Build items before rendering is wired. Active items stay in the workspace; archived items stay out of the way until restored.</p>
+                  <p className="panel-copy">Sign in with GitHub to save private Build items, video project plans, and rendering notes. Active items stay in the workspace; archived items stay out of the way until restored.</p>
                 </div>
                 <div className="build-summary">
                   <span>{activeBuildCount} active</span>
@@ -3007,6 +3174,94 @@ function App() {
                 </label>
               </div>
 
+              <section className="video-project-panel" aria-label="Video Project Builder">
+                <div className="api-settings-header">
+                  <div>
+                    <p className="eyebrow">Video Project Builder</p>
+                    <h2>Transcript to strategy to EDL.</h2>
+                    <p className="panel-copy">Logged-in users can create a readable edit package from pasted script text before any render worker touches media. URL context needs Firecrawl, AI-assisted strategy needs OpenAI, Claude, or OpenRouter, transcription needs a speech-to-text provider, and final MP4 rendering needs an external worker/provider.</p>
+                  </div>
+                  <button className="save-button is-primary-action" type="button" onClick={draftVideoProject}>
+                    <VideoCamera size={17} weight="bold" />
+                    Draft Video Project
+                  </button>
+                </div>
+                <div className="build-requirement-grid" aria-label="Build feature requirements">
+                  {BUILD_REQUIREMENT_GUIDE.map(([title, copy]) => (
+                    <article className="build-requirement-card" key={title}>
+                      <h3>{title}</h3>
+                      <p>{copy}</p>
+                    </article>
+                  ))}
+                </div>
+                <div className="video-project-grid">
+                  <div className="field-control">
+                    <span>Output format</span>
+                    <CustomSelect
+                      ariaLabel="Video output format"
+                      value={buildForm.outputFormat}
+                      options={VIDEO_OUTPUT_OPTIONS}
+                      onChange={(value) => setBuildForm((current) => ({ ...current, outputFormat: value }))}
+                    />
+                  </div>
+                  <label className="field-control build-textarea-field" htmlFor="build-transcript">
+                    <span>Transcript reading view</span>
+                    <textarea
+                      id="build-transcript"
+                      value={buildForm.transcriptText}
+                      onChange={(event) => setBuildForm((current) => ({ ...current, transcriptText: event.target.value }))}
+                      placeholder="Paste or draft the transcript. Keep this easy to scan and search."
+                    />
+                  </label>
+                  <label className="field-control build-textarea-field" htmlFor="build-edit-plan">
+                    <span>Edit strategy</span>
+                    <textarea
+                      id="build-edit-plan"
+                      value={buildForm.editPlan}
+                      onChange={(event) => setBuildForm((current) => ({ ...current, editPlan: event.target.value }))}
+                      placeholder="Confirm the edit strategy before cutting: pacing, keeper shots, hooks, trims, visuals, and review notes."
+                    />
+                  </label>
+                  <label className="field-control build-textarea-field is-code is-wide" htmlFor="build-edl">
+                    <span>EDL JSON</span>
+                    <textarea
+                      id="build-edl"
+                      value={buildForm.edlJson}
+                      onChange={(event) => setBuildForm((current) => ({ ...current, edlJson: event.target.value }))}
+                      placeholder='{"version":"promptdeck.edl.v1","sources":[],"ranges":[]}'
+                    />
+                  </label>
+                  <label className="field-control build-textarea-field is-compact" htmlFor="build-subtitle-style">
+                    <span>Subtitle style</span>
+                    <textarea
+                      id="build-subtitle-style"
+                      value={buildForm.subtitleStyle}
+                      onChange={(event) => setBuildForm((current) => ({ ...current, subtitleStyle: event.target.value }))}
+                      placeholder="Describe subtitle timing, casing, placement, and contrast."
+                    />
+                  </label>
+                  <label className="field-control build-textarea-field is-compact" htmlFor="build-checklist">
+                    <span>Render checklist</span>
+                    <textarea
+                      id="build-checklist"
+                      value={buildForm.renderChecklist}
+                      onChange={(event) => setBuildForm((current) => ({ ...current, renderChecklist: event.target.value }))}
+                      placeholder="Track transcript, cut, subtitle, review, and export tasks."
+                    />
+                  </label>
+                  <label className="field-control build-textarea-field is-wide" htmlFor="build-memory">
+                    <span>Project memory</span>
+                    <textarea
+                      id="build-memory"
+                      value={buildForm.projectMemory}
+                      onChange={(event) => setBuildForm((current) => ({ ...current, projectMemory: event.target.value }))}
+                      placeholder="Keep persistent decisions, source notes, approvals, render attempts, and what changed between versions."
+                    />
+                  </label>
+                </div>
+                <p className="editor-note">This creates reviewable video instructions only. The browser does not transcribe source media or render final MP4 files by itself.</p>
+              </section>
+
               <div className="build-action-row">
                 <button className="save-button" type="button" onClick={seedBuildFromCurrentScript}>
                   <Article size={17} weight="bold" />
@@ -3044,9 +3299,18 @@ function App() {
                             {BUILD_KIND_OPTIONS.find((option) => option.value === item.kind)?.label ?? item.kind}
                           </span>
                           <span className="build-status-chip">{item.status}</span>
+                          {item.transcriptText || item.edlJson || item.editPlan ? <span className="build-status-chip is-video-project">video project</span> : null}
                         </div>
                         <h3>{item.title}</h3>
-                        <p>{item.videoBrief || item.sourceText || item.notes || "No brief added yet."}</p>
+                        <p>{item.editPlan || item.videoBrief || item.sourceText || item.notes || "No brief added yet."}</p>
+                        {item.transcriptText || item.edlJson || item.renderChecklist ? (
+                          <div className="build-readiness-row" aria-label="Video project readiness">
+                            <span className={item.transcriptText ? "is-ready" : undefined}>Transcript</span>
+                            <span className={item.edlJson ? "is-ready" : undefined}>EDL</span>
+                            <span className={item.renderChecklist ? "is-ready" : undefined}>Checklist</span>
+                            {item.outputFormat ? <span className="is-ready">{item.outputFormat}</span> : null}
+                          </div>
+                        ) : null}
                         <div className="build-item-meta">
                           <span>{BUILD_SOURCE_OPTIONS.find((option) => option.value === item.sourceType)?.label ?? item.sourceType}</span>
                           <span>Updated {new Date(item.updatedAt).toLocaleDateString()}</span>
@@ -3107,7 +3371,7 @@ function App() {
                 <div>
                   <p className="eyebrow">Video builder</p>
                   <h2>Links, docs, scripts, and prompts to video.</h2>
-                  <p className="panel-copy">Recommended path: Firecrawl for source context, AI for script and shot structure, HyperFrames or Remotion for rendering, R2 for large artifacts, and Mux for playback.</p>
+                  <p className="panel-copy">Recommended path: Firecrawl for source context, AI for script and shot structure, a transcription service for word-level timing, HyperFrames or Remotion for rendering, R2 for large artifacts, and Mux for playback.</p>
                 </div>
                 <button
                   className="save-button has-tooltip"

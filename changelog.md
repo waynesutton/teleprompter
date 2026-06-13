@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added an explicit `deploy:static:prod` script for production Convex static hosting uploads.
+- Added a `deploy:backend:prod` script and made `deploy` run backend production deploy before static upload.
+- Added a `convex-static-hosting-deploy` skill with `/deploydev` and `/deployprod` workflows for this app.
 - Created a black and white Vite React teleprompter app with Convex-backed script and settings state.
 - Added a two-tab workflow for prompting and script editing.
 - Added prompter controls for playback, scroll position, font size, speed, mirrored text, and reading guide.
@@ -56,9 +59,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added `docs/build-video-setup.md` for the recommended Firecrawl, AI, HyperFrames, Remotion, R2, Mux, and Convex job workflow.
 - Added a per-user Build item library for saving scripts, videos, or combined script-and-video work.
 - Added Build tab controls for editing, archiving, restoring, deleting, seeding from the current script, and sending saved Build scripts back to the Script tab.
+- Added a Video Project Builder in Build with transcript reading view, edit strategy, EDL JSON, subtitle style, render checklist, output format, and project memory fields.
+- Added a local Draft Video Project action that converts the current script or Build form into a reviewable video planning package without requiring AI.
 
 ### Changed
 
+- Changed `deploy` and `deploy:static` to route through the production static upload script.
+- Changed production deploy documentation to separate full backend+static deploys from static-only uploads.
+- Updated GitHub Auth setup guidance to use the production Convex site instead of the dev site.
 - Renamed the Tab 2 header save action to `Save to Library` and connected it to the shared script library save flow.
 - Improved responsive prompter controls for mobile and compact 1024x600 displays.
 - Moved the Tab 1 counter into the bottom control area and added hide/show controls.
@@ -96,6 +104,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Moved Script generator and BYOK settings out of Script and into Build.
 - Updated tab switching shortcuts so `Command/Ctrl + 3` opens Build and `Command/Ctrl + 4` opens Help.
 - Expanded the Build tab from setup-only planning into a content workspace for script and video drafts.
+- Updated Build item cards to show video project readiness for transcript, EDL, checklist, and output format artifacts.
+- Updated README and Build video setup docs to describe the transcript-first video project workflow.
+- Made Draft Video Project a logged-in-only action and clarified that saving scripts, videos, and Build items requires GitHub login.
+- Updated Build, Help, About, README, and setup guide copy to explain which video workflow features need Firecrawl, AI provider keys, transcription services, and external render workers.
 
 ### Removed
 

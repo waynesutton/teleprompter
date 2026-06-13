@@ -10,8 +10,10 @@
     "lint": "eslint .",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "deploy": "npx @convex-dev/static-hosting deploy -c staticHosting",
-    "deploy:static": "npx @convex-dev/static-hosting upload --build -c staticHosting --prod",
+    "deploy": "npm run deploy:backend:prod && npm run deploy:static:prod",
+    "deploy:backend:prod": "npx convex deploy --yes",
+    "deploy:static": "npm run deploy:static:prod",
+    "deploy:static:prod": "npx @convex-dev/static-hosting upload --build -c staticHosting --prod",
     "deploy:static:dev": "npx @convex-dev/static-hosting upload --build -c staticHosting --dev"
   },
   "dependencies": {

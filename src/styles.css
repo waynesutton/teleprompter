@@ -1196,6 +1196,11 @@ textarea {
   color: var(--graphite-secondary);
 }
 
+.build-status-chip.is-video-project {
+  border-color: rgba(183, 255, 57, 0.38);
+  color: var(--graphite-accent);
+}
+
 .build-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1213,6 +1218,92 @@ textarea {
   border-radius: 10px;
   font-size: 15px;
   line-height: 1.5;
+}
+
+.build-textarea-field.is-compact textarea {
+  min-height: 88px;
+}
+
+.build-textarea-field.is-code textarea {
+  min-height: 168px;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.video-project-panel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(183, 255, 57, 0.2);
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, rgba(183, 255, 57, 0.055), transparent 32%),
+    var(--soft-black);
+}
+
+.video-project-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.build-requirement-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.build-requirement-card {
+  padding: 12px;
+  border: 1px solid rgba(156, 163, 175, 0.18);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.build-requirement-card h3 {
+  margin: 0 0 6px;
+  color: var(--graphite-primary);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.build-requirement-card p {
+  margin: 0;
+  color: var(--graphite-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.video-project-grid > .field-control:first-child,
+.video-project-grid .is-wide {
+  grid-column: span 2;
+}
+
+.build-readiness-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.build-readiness-row span {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid var(--quiet-white);
+  border-radius: 999px;
+  color: var(--muted-white);
+  font: 800 10px/1.1 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+}
+
+.build-readiness-row span.is-ready {
+  border-color: rgba(183, 255, 57, 0.32);
+  color: var(--graphite-accent);
 }
 
 .build-filter-control {
@@ -2158,7 +2249,11 @@ textarea:focus-visible {
 
   .build-form-grid,
   .build-form-grid .is-wide,
-  .build-textarea-field {
+  .build-textarea-field,
+  .build-requirement-grid,
+  .video-project-grid,
+  .video-project-grid > .field-control:first-child,
+  .video-project-grid .is-wide {
     grid-template-columns: 1fr;
     grid-column: span 1;
   }

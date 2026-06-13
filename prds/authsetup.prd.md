@@ -59,8 +59,8 @@ The app started with shared Convex records and deployment-level API keys. That m
 
 6. Create a GitHub OAuth app:
 
-   - Homepage URL: `https://fearless-dolphin-422.convex.site`
-   - Authorization callback URL: `https://fearless-dolphin-422.convex.site/api/auth/callback/github`
+   - Homepage URL: `https://befitting-dodo-95.convex.site`
+   - Authorization callback URL: `https://befitting-dodo-95.convex.site/api/auth/callback/github`
    - Local callback during dev: use the Convex dev site URL shown by `npx convex dev`, with `/api/auth/callback/github`.
 
 7. Set Convex environment variables:
@@ -68,7 +68,7 @@ The app started with shared Convex records and deployment-level API keys. That m
    ```bash
    npx convex env set AUTH_GITHUB_ID "..."
    npx convex env set AUTH_GITHUB_SECRET "..."
-   npx convex env set SITE_URL "https://fearless-dolphin-422.convex.site"
+   npx convex env set SITE_URL "https://befitting-dodo-95.convex.site"
    npx convex env set USER_KEYS_SECRET "generate-a-long-random-secret"
    ```
 

@@ -1,8 +1,9 @@
 # Files
 
-- `package.json` - Project scripts and dependencies for the Vite, React, TypeScript, Convex, Convex Auth, static hosting, Phosphor Icons, Graphite fonts, and accessible font app.
+- `package.json` - Project scripts and dependencies for the Vite, React, TypeScript, Convex, Convex Auth, production backend deploys, production and dev static hosting uploads, Phosphor Icons, Graphite fonts, and accessible font app.
 - `package-lock.json` - npm dependency lockfile.
 - `.env.example` - Example environment file showing the required Convex URL variable.
+- `.codex/skills/convex-static-hosting-deploy/SKILL.md` - Project skill for `/deploydev`, `/deployprod`, and Convex static-hosting deployment workflows.
 - `index.html` - Vite HTML entry file with SEO, AEO, GEO, Open Graph, Twitter card, favicon, canonical, sitemap, and JSON-LD metadata.
 - `public/favicon.svg` - Custom SVG favicon for Teleprompt.
 - `public/social-card.svg` - Large 1200x630 SVG share image for Open Graph and Twitter cards.
@@ -12,13 +13,13 @@
 - `eslint.config.js` - ESLint configuration for TypeScript and React hooks.
 - `tsconfig.json` - TypeScript configuration for app and Convex code.
 - `src/main.tsx` - React entry point, Convex Auth provider setup, and bundled Inter, Inter Tight, JetBrains Mono, Lexend, and OpenDyslexic font imports.
-- `src/App.tsx` - Four-tab teleprompter experience with Prompter, Script, Build, Help, bottom-tab GitHub auth UI, per-user saved library gates, encrypted BYOK settings, Phosphor icons, prompting, draggable/resizable synced Mini View modal beside the hide-bar control, optional RSVP/ORP reading mode, keyboard tab switching, Tab 1 Layout hide/show control, countdown counter shortcut, fit-to-window measurement, Gear menu secondary options, app-driven script undo, script editing and preview, Graphite styled selectors, Build tab AI script generation, Build item save/edit/archive/delete workspace, built-in and custom Script Voice Profiles, video workflow planning, RSVP rewrite controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, user script save/load/delete, default settings, counter visibility, keyboard shortcuts, shortcut help modal, Help app docs and About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
-- `src/styles.css` - Graphite-inspired responsive interface styles, including bottom-tab auth control, BYOK settings, Build video workflow and Build item library panels, shared control tokens, true teleprompter end-scroll padding, RSVP word and pivot rendering, custom selectors with upward placement support, compact one-row desktop prompter dock spacing, Tab 1 Gear menu, Tab 1 Layout and mini-view side controls, draggable/resizable true Mini View modal, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator and Script Voice Profile controls, shortcut modal, login modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, app docs cards, shortcut, About table, and wrapping shared library controls.
+- `src/App.tsx` - Four-tab teleprompter experience with Prompter, Script, Build, Help, bottom-tab GitHub auth UI, per-user saved library gates, encrypted BYOK settings, Phosphor icons, prompting, draggable/resizable synced Mini View modal beside the hide-bar control, optional RSVP/ORP reading mode, keyboard tab switching, Tab 1 Layout hide/show control, countdown counter shortcut, fit-to-window measurement, Gear menu secondary options, app-driven script undo, script editing and preview, Graphite styled selectors, Build tab AI script generation, logged-in Video Project Builder with requirement cards, Build item save/edit/archive/delete workspace, built-in and custom Script Voice Profiles, video workflow planning, RSVP rewrite controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, user script save/load/delete, default settings, counter visibility, keyboard shortcuts, shortcut help modal, Help app docs and About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
+- `src/styles.css` - Graphite-inspired responsive interface styles, including bottom-tab auth control, BYOK settings, Build video workflow, Video Project Builder, Build requirement cards, Build item library panels, readiness chips, shared control tokens, true teleprompter end-scroll padding, RSVP word and pivot rendering, custom selectors with upward placement support, compact one-row desktop prompter dock spacing, Tab 1 Gear menu, Tab 1 Layout and mini-view side controls, draggable/resizable true Mini View modal, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator and Script Voice Profile controls, shortcut modal, login modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, app docs cards, shortcut, About table, and wrapping shared library controls.
 - `src/vite-env.d.ts` - Vite environment type references.
 - `convex/auth.ts` - Convex Auth GitHub provider configuration and exported auth functions.
-- `convex/schema.ts` - Convex schema for auth tables, per-user prompt state, per-user default settings, Graphite font and dark grey color selection, folder-aware saved scripts, Build items, custom Script Voice Profiles, and encrypted user API key records including Mux and HeyGen.
+- `convex/schema.ts` - Convex schema for auth tables, per-user prompt state, per-user default settings, Graphite font and dark grey color selection, folder-aware saved scripts, Build items with video project planning artifacts, custom Script Voice Profiles, and encrypted user API key records including Mux and HeyGen.
 - `convex/teleprompter.ts` - Convex queries and mutations for authenticated current prompt state, per-user default settings, Graphite font and dark grey color validation, and folder-aware saved script save/delete.
-- `convex/buildItems.ts` - Convex queries and mutations for authenticated Build item listing, saving, editing, archiving, restoring, and deleting.
+- `convex/buildItems.ts` - Convex queries and mutations for authenticated Build item listing, saving, editing, archiving, restoring, deleting, and storing video project planning artifacts.
 - `convex/aiScripts.ts` - Convex actions for authenticated BYOK provider status, Script Voice Profile-aware script generation with OpenAI, Claude, OpenRouter, Firecrawl URL scraping, and optional RSVP script rewriting.
 - `convex/scriptVoices.ts` - Convex queries and mutations for listing, saving, updating, and deleting authenticated custom Script Voice Profiles.
 - `convex/userApiKeys.ts` - Convex queries and mutations for per-user encrypted AI, scraping, voice, Mux, and HeyGen API key status, storage, and removal.
@@ -31,7 +32,7 @@
 - `convex/http.ts` - HTTP routes for Convex Auth plus static hosting routes that serve the built app from Convex storage.
 - `convex/_generated/` - Convex generated client and server types.
 - `convex/tsconfig.json` - Convex TypeScript configuration generated by Convex.
-- `docs/build-video-setup.md` - Setup guide for Build tab video generation architecture with Firecrawl, AI, HyperFrames, Remotion, R2, Mux, and Convex job tracking.
+- `docs/build-video-setup.md` - Setup guide for Build tab video generation architecture, login requirements, provider requirements, the Video Project Builder, Firecrawl, AI, HyperFrames, Remotion, R2, Mux, and Convex job tracking.
 - `prds/teleprompter-app.md` - Product requirements for the local teleprompter build.
 - `prds/shared-script-library.md` - Product requirements for shared script save/load.
 - `prds/app-interaction-polish.md` - Product requirements for app-wide UI interaction polish.
@@ -56,6 +57,7 @@
 - `prds/script-voice-profiles.md` - Product requirements for built-in and Convex-backed custom Script Voice Profiles.
 - `prds/app-metadata-and-readme-refresh.md` - Product requirements for public app metadata, social assets, and README refresh.
 - `prds/authsetup.prd.md` - Product requirements and setup steps for Convex Auth GitHub login, per-user data, and BYOK provider settings.
+- `prds/static-hosting-deploy-skill.md` - Product requirements for the project-specific Convex static-hosting deploy skill.
 - `prds/mini-prompter-popup.md` - Product requirements for the synced Tab 1 mini prompter popup and shared keyboard shortcut support.
 - `prds/mini-prompter-chrome-polish.md` - Product requirements for the mini popup chrome sizing and launcher placement update.
 - `prds/mini-view-true-modal.md` - Product requirements for converting Mini View from a browser popup into an app-owned modal.
@@ -63,5 +65,8 @@
 - `prds/mini-view-drag-resize.md` - Product requirements for Mini View drag, resize, smaller default frame, and viewport clamping.
 - `prds/build-tab-video-workflow.md` - Product requirements for the Build tab, video workflow planning, and video provider BYOK setup.
 - `prds/build-library-management.md` - Product requirements for the Build item save, edit, archive, restore, and delete workspace.
+- `prds/video-project-builder.md` - Product requirements for the Build tab Video Project Builder and transcript-first planning artifacts.
+- `prds/build-login-requirements-copy.md` - Product requirements for Build login gating and API/service requirement copy.
+- `prds/production-static-hosting-deploy.md` - Product requirements for making production Convex static hosting deploys explicit.
 - `changelog.md` - Project changelog.
 - `task.md` - Completed task log.
