@@ -1,6 +1,6 @@
-# Teleprompt
+# PromptDeck
 
-Teleprompt is an open source browser teleprompter for writing, organizing, generating, and reading scripts.
+PromptDeck is an open source browser teleprompter for writing, organizing, generating, and reading scripts.
 
 It is built for one person recording a talk, product update, tutorial, or video script who wants the script editor and the live prompter in the same app.
 
@@ -10,18 +10,18 @@ It is built for one person recording a talk, product update, tutorial, or video 
 - Mini popup prompter view with synced scroll/RSVP state, playback state, page progress, and keyboard shortcuts.
 - RSVP reading mode with one-word-at-a-time playback and red ORP pivot-letter highlighting.
 - Script editor with preview, page breaks, color formatting, markdown export, counters, and app-driven undo.
-- Shared script library with folders, save, load, and delete.
-- Keyboard shortcuts for playback, tab switching, sizing, speed, pages, mini view, RSVP, help, undo, counter visibility, and control-bar visibility.
+- Per-user script library with folders, save, load, and delete after GitHub login.
+- Keyboard shortcuts for playback, tab switching, sizing, speed, pages, mini view, RSVP, About, undo, counter visibility, and control-bar visibility.
 - Optional AI script generator using OpenAI, Claude, OpenRouter, and Firecrawl URL context.
 - Built-in Script Voice Profiles for AI generation: Teleprompter Natural, Founder Update, YouTube Intro, Investor Pitch, Educator, and High-Energy Creator.
-- GitHub login with per-user saved scripts, folders, defaults, API keys, and custom Script Voice Profiles.
+- GitHub login with per-user saved scripts, folders, default settings, API keys, and custom Script Voice Profiles.
 - Bring-your-own-key AI setup for OpenAI, Claude, OpenRouter, Firecrawl, and ElevenLabs.
 - Logged-in Build workspace for saving script, video, or combined project items with edit, archive, restore, and delete controls.
 - Logged-in Video Project Builder with transcript reading view, edit strategy, EDL JSON, subtitle style, render checklist, output format, and persistent project memory.
 - Custom Script Voice Profiles saved per user in Convex with audience, tone, pacing, banned words, preferred phrases, examples, structure, and default length.
 - Optional ElevenLabs voice setup gate for narration features.
-- Tab 3 app docs, shortcut reference, saved defaults, and About feature table.
-- Graphite-styled UI with Phosphor Icons and accessible font options.
+- About docs, shortcut reference, video workflow notes, and open source feature table.
+- PromptDeck-styled UI with Phosphor Icons and accessible font options.
 - Convex static hosting for serving the built Vite app.
 
 ## How the app works
@@ -30,11 +30,13 @@ Use **Tab 2 Script** to write, paste, save, load, format, preview, or generate a
 
 Use **Tab 1 Prompter** to read it live. Scroll mode behaves like a standard teleprompter. RSVP mode shows one word at a time with a red pivot letter. The mini view opens a compact synced popup for recording setups where the full app should stay out of the way.
 
-Use **Build** to generate scripts, manage BYOK provider setup, save reusable Build items, and draft video projects from links, docs, scripts, or prompts. Build requires GitHub login for saving. Drafting from pasted script text does not need an AI key after login, but URL context needs Firecrawl, AI-assisted strategy/EDL needs OpenAI, Claude, or OpenRouter, transcription needs a speech-to-text provider, and final video rendering needs an external worker/provider pipeline.
+Use **Build** to generate scripts, save reusable Build items, and draft video projects from links, docs, scripts, or prompts. Build requires GitHub login for saving. Drafting from pasted script text does not need an AI key after login, but URL context needs Firecrawl, AI-assisted strategy/EDL needs OpenAI, Claude, or OpenRouter, transcription needs a speech-to-text provider, and final video rendering needs an external worker/provider pipeline.
 
-Use **Help** for app docs, keyboard shortcuts, defaults, and the About section.
+Use **About** for app docs, keyboard shortcuts, video workflow docs, and the open source feature table.
 
-AI is optional. Without login, the core teleprompter still works. Logged-in users add their own provider keys in Build settings.
+Use **Account** after GitHub login to manage profile actions, default script settings, BYOK provider keys, and custom setup.
+
+AI is optional. Without login, the core teleprompter still works. Logged-in users add their own provider keys in Account settings.
 
 ## Script voice vs narration voice
 

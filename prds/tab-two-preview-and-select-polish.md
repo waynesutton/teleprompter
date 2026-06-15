@@ -5,7 +5,7 @@ Completed: 2026-05-31T05:05:00Z
 
 ## Goal
 
-Polish Tab 2 so the editor controls feel consistent with the Graphite UI, avoid browser-default dropdowns, and add a fast script preview next to the editor label.
+Polish Tab 2 so the editor controls feel consistent with the PromptDeck UI, avoid browser-default dropdowns, and add a fast script preview next to the editor label.
 
 ## Scope
 

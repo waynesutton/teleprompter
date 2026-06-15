@@ -1,0 +1,305 @@
+Created: 2026-06-14 00:40 UTC
+Last Updated: 2026-06-14 01:55 UTC
+Status: Done
+
+# PromptDeck Custom Domain Setup
+
+## Goal
+
+Set up `promptdeck.app` as the public production domain for the Convex-hosted PromptDeck app currently served at:
+
+- Production static site: `https://befitting-dodo-95.convex.site/`
+- Production Convex cloud API: `https://befitting-dodo-95.convex.cloud`
+- Domain registrar/DNS provider: Cloudflare
+
+The intended final public app URL is:
+
+- `https://www.promptdeck.app/`
+
+Optional secondary hostname:
+
+- `https://promptdeck.app/`
+
+## Current Hosting Model
+
+This repo uses `@convex-dev/static-hosting`, not `@convex-dev/self-hosting`.
+
+Current production deploy command:
+
+```bash
+npm run deploy
+```
+
+That command deploys backend functions first, then uploads the static Vite build to production static hosting:
+
+```bash
+npm run deploy:backend:prod
+npm run deploy:static:prod
+```
+
+Do not run `npm run build` separately before production static upload. The static-hosting upload command uses `--build --prod` so the production bundle receives:
+
+```text
+VITE_CONVEX_URL=https://befitting-dodo-95.convex.cloud
+```
+
+## Prerequisites
+
+- Convex Pro plan. Convex custom domains require Pro.
+- Access to the Convex dashboard for the production deployment.
+- Access to Cloudflare DNS for `promptdeck.app`.
+- Confirm the app is deployed to production:
+
+```bash
+npm run deploy
+```
+
+- Confirm production HTML does not point to the dev deployment:
+
+```bash
+curl -L -s https://befitting-dodo-95.convex.site/ | rg 'fearless-dolphin-422|befitting-dodo-95|/assets/index-'
+```
+
+Expected:
+
+- Shows `befitting-dodo-95`.
+- Does not show `fearless-dolphin-422`.
+
+## Setup Decision
+
+Use the `www` hostname as canonical:
+
+```text
+www.promptdeck.app
+```
+
+Use `promptdeck.app` only as an alias/redirect to `www` if desired.
+
+The cleanest production setup is:
+
+1. Add `www.promptdeck.app` as a custom domain on the Convex production deployment.
+2. Add the exact DNS records Convex shows in Cloudflare.
+3. Wait for Convex to verify the domain and mint the certificate.
+4. Override production Convex site URL environment variables if using Convex Auth redirects on the custom domain.
+5. Update app metadata and auth settings from `befitting-dodo-95.convex.site` to `www.promptdeck.app`.
+6. Redeploy production.
+
+## Convex Dashboard Steps
+
+1. Open the Convex dashboard.
+2. Select the production deployment:
+
+```text
+befitting-dodo-95
+```
+
+3. Open Deployment Settings.
+4. Find Custom Domains.
+5. Add:
+
+```text
+www.promptdeck.app
+```
+
+6. If you want the apex hostname too, add it as a second custom domain:
+
+```text
+promptdeck.app
+```
+
+7. Convex will show required DNS records. Copy those exact records into Cloudflare.
+
+Do not guess the target values. The Convex dashboard is the source of truth for the verification and routing records.
+
+## Cloudflare DNS Steps
+
+1. Open Cloudflare dashboard.
+2. Select `promptdeck.app`.
+3. Go to DNS > Records.
+4. Add the exact DNS records shown by Convex.
+
+For the apex domain, Cloudflare supports CNAME flattening, so if Convex gives a CNAME-style target for `promptdeck.app`, use Cloudflare's DNS UI as directed by Convex.
+
+Recommended initial proxy status:
+
+```text
+DNS only
+```
+
+Reason: keep Convex domain verification and certificate issuance simple. After Convex shows a verified green check and the site works on HTTPS, you can test Cloudflare proxying if you specifically want Cloudflare edge features in front of Convex.
+
+If Cloudflare already has conflicting records for `promptdeck.app` or `www`, remove or replace the conflicting records after confirming they are not used for email or another service.
+
+## Verification
+
+After adding DNS records, wait for propagation and Convex verification.
+
+Convex says the first request can take up to a minute after verification because Convex has to mint a new SSL certificate.
+
+Check DNS:
+
+```bash
+dig promptdeck.app
+dig www.promptdeck.app
+```
+
+Check HTTPS:
+
+```bash
+curl -I https://www.promptdeck.app/
+```
+
+Check app HTML:
+
+```bash
+curl -L -s https://www.promptdeck.app/ | rg 'promptdeck.app|befitting-dodo-95|fearless-dolphin-422|/assets/index-'
+```
+
+Expected:
+
+- Shows `www.promptdeck.app` after metadata is updated and redeployed.
+- May show `befitting-dodo-95` only before metadata/env updates are complete.
+- Must not show `fearless-dolphin-422`.
+
+## Convex Auth Updates
+
+Because this app uses Convex Auth with GitHub login, update the GitHub OAuth app callback after the custom domain is active.
+
+Production callback should become:
+
+```text
+https://www.promptdeck.app/api/auth/callback/github
+```
+
+Keep the old production Convex site callback available during transition if GitHub allows multiple callback URLs, or update during a short maintenance window.
+
+Also update production Convex env vars if currently set to the Convex site URL:
+
+```text
+SITE_URL=https://www.promptdeck.app
+CUSTOM_AUTH_SITE_URL=https://www.promptdeck.app
+JWT_PRIVATE_KEY=<generated by npx @convex-dev/auth>
+JWKS=<generated by npx @convex-dev/auth>
+```
+
+`CONVEX_SITE_URL` is built in by Convex and cannot be overridden with `convex env set`. `CUSTOM_AUTH_SITE_URL` is used by Convex Auth for custom-domain OAuth URLs in this app. Convex custom domain docs also mention `CONVEX_CLOUD_URL` for function/API default domains. Only override it if you also configure a custom API/cloud domain and intentionally want generated client/API URLs to use that domain.
+
+If GitHub login fails after callback with `Missing environment variable JWT_PRIVATE_KEY`, set `JWT_PRIVATE_KEY` and `JWKS` on the production Convex deployment. This is a server-side Convex Auth configuration issue, not a React bug.
+
+## App Metadata Updates
+
+After `www.promptdeck.app` is verified, update public app metadata from:
+
+```text
+https://befitting-dodo-95.convex.site/
+```
+
+to:
+
+```text
+https://www.promptdeck.app/
+```
+
+Likely files:
+
+- `index.html`
+- `public/robots.txt`
+- `public/sitemap.xml`
+- `README.md`
+- `prds/authsetup.prd.md`
+- `.agents/skills/deployprod/SKILL.md`
+- `.codex/skills/convex-static-hosting-deploy/SKILL.md`
+- `.agents/skills/convex-static-hosting-deploy/SKILL.md`
+
+Then deploy production:
+
+```bash
+npm run deploy
+```
+
+## Recommended Cutover Sequence
+
+1. Deploy current production:
+
+```bash
+npm run deploy
+```
+
+2. Add `www.promptdeck.app` in Convex production custom domains.
+3. Add Convex-provided DNS records in Cloudflare as DNS-only.
+4. Wait for Convex verification and SSL certificate issuance.
+5. Verify `https://www.promptdeck.app/`.
+6. Update GitHub OAuth callback to `https://www.promptdeck.app/api/auth/callback/github`.
+7. Update Convex production env vars:
+
+```text
+SITE_URL=https://www.promptdeck.app
+CUSTOM_AUTH_SITE_URL=https://www.promptdeck.app
+JWT_PRIVATE_KEY=<generated by npx @convex-dev/auth>
+JWKS=<generated by npx @convex-dev/auth>
+```
+
+8. Update app metadata files to use `https://www.promptdeck.app/`.
+9. Redeploy production:
+
+```bash
+npm run deploy
+```
+
+10. Smoke check:
+
+```bash
+curl -L -s https://www.promptdeck.app/ | rg 'promptdeck.app|fearless-dolphin-422|/assets/index-'
+```
+
+## Rollback Plan
+
+If the custom domain fails:
+
+1. Keep production available at:
+
+```text
+https://befitting-dodo-95.convex.site/
+```
+
+2. Revert metadata/env callback changes back to the Convex production URL.
+3. Redeploy production:
+
+```bash
+npm run deploy
+```
+
+4. Remove or disable the Cloudflare DNS records that point `promptdeck.app` to Convex only if they are causing user-facing failures.
+
+## Edge Cases
+
+- Cloudflare proxying may hide DNS target details during verification. Use DNS-only until Convex verifies.
+- Apex records need Cloudflare CNAME flattening if Convex asks for a CNAME-style record at `promptdeck.app`.
+- GitHub OAuth can fail if `SITE_URL`, `CONVEX_SITE_URL`, and GitHub callback URLs do not match the active public domain.
+- Do not point public metadata, Open Graph, sitemap, or robots to the dev deployment.
+- Do not change local `.env.local` if it is intentionally pinned to development.
+
+## Upstream Check
+
+Retrieved upstream/self-hosting status:
+
+- Timestamp: `2026-06-14T00:42:32Z`
+- `get-convex/self-hosting` head commit: `188a92afbeea88540a81cb1e653d3b2b9aa6fd7d`
+- `@convex-dev/self-hosting` npm version: `0.1.1`
+- Integration guide SHA-256: `07c7c7cb14e8cbcd736f6f19eabd56573d2a3dedbb370c3b216ccc48d136a4c3`
+- Convex docs index SHA-256: `265798ecb996032085800b438c256ea4bb3264570e118e48588ef1f9c5d642a1`
+
+Package path selected for this app:
+
+- Keep `@convex-dev/static-hosting`.
+- Reason: this repo is already configured with `@convex-dev/static-hosting`, production deploys are working, and the request is custom-domain DNS setup, not migration to `@convex-dev/self-hosting`.
+
+## Sources
+
+- Convex custom domains: `https://docs.convex.dev/production/custom-domains`
+- Convex static hosting component: `https://www.convex.dev/components/static-hosting`
+- Static hosting component repo: `https://github.com/get-convex/static-hosting`
+- Cloudflare DNS get started: `https://developers.cloudflare.com/dns/get-started/`
+- Cloudflare apex records: `https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-zone-apex/`
+- Cloudflare CNAME flattening: `https://developers.cloudflare.com/dns/cname-flattening/`
+- Cloudflare proxy status: `https://developers.cloudflare.com/dns/proxy-status/`

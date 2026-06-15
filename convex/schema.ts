@@ -18,8 +18,9 @@ export default defineSchema({
     textColor: v.optional(
       v.union(v.literal("white"), v.literal("red"), v.literal("yellow"), v.literal("grey"), v.literal("darkgrey")),
     ),
-    fontFamily: v.optional(v.union(v.literal("system"), v.literal("graphite"), v.literal("lexend"), v.literal("opendyslexic"))),
+    fontFamily: v.optional(v.string()),
     layoutMode: v.optional(v.union(v.literal("left"), v.literal("centered"))),
+    backgroundMode: v.optional(v.union(v.literal("black"), v.literal("spotlight"), v.literal("white"))),
     updatedAt: v.number(),
   })
     .index("by_key", ["key"])
@@ -31,8 +32,9 @@ export default defineSchema({
     speed: v.number(),
     speedMultiplier: v.number(),
     textColor: v.union(v.literal("white"), v.literal("red"), v.literal("yellow"), v.literal("grey"), v.literal("darkgrey")),
-    fontFamily: v.union(v.literal("system"), v.literal("graphite"), v.literal("lexend"), v.literal("opendyslexic")),
+    fontFamily: v.string(),
     layoutMode: v.union(v.literal("left"), v.literal("centered")),
+    backgroundMode: v.optional(v.union(v.literal("black"), v.literal("spotlight"), v.literal("white"))),
     guide: v.boolean(),
     fitToWindow: v.boolean(),
     updatedAt: v.number(),
@@ -80,6 +82,7 @@ export default defineSchema({
       v.literal("openrouter"),
       v.literal("firecrawl"),
       v.literal("elevenlabs"),
+      v.literal("r2"),
       v.literal("mux"),
       v.literal("heygen"),
     ),
@@ -92,6 +95,15 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_ownerId_and_service", ["ownerId", "service"])
+    .index("by_ownerId", ["ownerId"]),
+  aiPromptSettings: defineTable({
+    ownerId: v.id("users"),
+    prompt: v.string(),
+    skillSourceUrl: v.optional(v.string()),
+    skillMarkdown: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
     .index("by_ownerId", ["ownerId"]),
   buildItems: defineTable({
     ownerId: v.id("users"),

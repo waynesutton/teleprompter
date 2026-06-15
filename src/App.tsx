@@ -9,6 +9,7 @@ import {
   CaretLeft,
   CaretRight,
   CornersOut,
+  Copy,
   DownloadSimple,
   Eye,
   FlipHorizontal,
@@ -21,28 +22,33 @@ import {
   List,
   Microphone,
   MonitorArrowUp,
+  PaperPlaneTilt,
   Pause,
   PencilSimple,
   Play,
   Plus,
   Question,
+  SignOut,
   SlidersHorizontal,
   Sparkle,
   TextAlignCenter,
   Trash,
+  UserCircle,
   VideoCamera,
   X,
 } from "@phosphor-icons/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
 
-type PromptTab = "prompter" | "script" | "build" | "help";
+type PromptTab = "prompter" | "script" | "build" | "help" | "account";
 type TextColor = "white" | "red" | "yellow" | "grey" | "darkgrey";
-type PromptFont = "system" | "graphite" | "lexend" | "opendyslexic";
+type PromptFont = "system" | "promptdeck" | "lexend" | "opendyslexic";
 type LayoutMode = "left" | "centered";
+type BackgroundMode = "black" | "spotlight" | "white";
 type AiProvider = "auto" | "openai" | "claude" | "openrouter";
 type AiLength = "short" | "long" | "open";
 type ReadingMode = "scroll" | "rsvp";
+type LegalModal = "privacy" | "terms";
 type SelectOption<Value extends string> = { value: Value; label: string };
 type ScriptVoiceProfile = {
   id: string;
@@ -70,7 +76,37 @@ type VoiceStatus = {
   provider: string;
 };
 
-type UserApiKeyService = "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "mux" | "heygen";
+type AiPromptSettings = {
+  isAuthenticated: boolean;
+  defaultPrompt: string;
+  prompt: string;
+  hasCustomPrompt: boolean;
+  skillSourceUrl: string | null;
+  skillMarkdown: string | null;
+  notes: string | null;
+  updatedAt: number | null;
+};
+
+type GeneratedScriptResult = {
+  script: string;
+  model: string;
+  provider: Exclude<AiProvider, "auto">;
+  usedUrl: string | null;
+};
+
+type SkillImportResult =
+  | {
+      ok: true;
+      message: string;
+      skillMarkdown: string;
+      skillSourceUrl: string;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
+type UserApiKeyService = "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "r2" | "mux" | "heygen";
 
 type UserApiKeyStatus = {
   isAuthenticated: boolean;
@@ -119,7 +155,9 @@ type PromptSettings = {
   textColor: TextColor;
   fontFamily: PromptFont;
   layoutMode: LayoutMode;
+  backgroundMode: BackgroundMode;
 };
+const PROMPT_FONTS: PromptFont[] = ["system", "promptdeck", "lexend", "opendyslexic"];
 type ShortcutEventLike = {
   key: string;
   code?: string;
@@ -144,14 +182,24 @@ type MiniViewInteraction = {
   startFrame: MiniViewFrame;
 };
 
-const DEFAULT_SCRIPT = `Hello everyone, and welcome to our channel!
+const DEFAULT_SCRIPT = `Welcome to PromptDeck.
 
-[short pause]
+PromptDeck helps you write, organize, and read scripts in the browser.
 
-Today, we have an exciting announcement to share with you.
-Start with your strongest line, keep your eyes near the lens, and let the words move at your pace.
+Start in Script when you need to draft.
+Move to Build when you want help turning notes, links, or ideas into a stronger script.
+Open Prompter when you are ready to read.
 
-Thank you for watching.`;
+[pause]
+
+Use page breaks when you want a cleaner pace.
+Use RSVP when you want one word at a time.
+Use Mini View when you need a compact recording window.
+
+The goal is simple:
+less setup, fewer distractions, better delivery.
+
+Let's record.`;
 
 const DEFAULT_SETTINGS: PromptSettings = {
   fontSize: 56,
@@ -164,6 +212,7 @@ const DEFAULT_SETTINGS: PromptSettings = {
   textColor: "white",
   fontFamily: "system",
   layoutMode: "left",
+  backgroundMode: "black",
 };
 const MINI_VIEW_MIN_WIDTH = 360;
 const MINI_VIEW_MIN_HEIGHT = 240;
@@ -213,13 +262,18 @@ const TEXT_COLORS: Array<{ value: TextColor; label: string }> = [
 ];
 const FONT_OPTIONS: Array<SelectOption<PromptFont>> = [
   { value: "system", label: "System" },
-  { value: "graphite", label: "Graphite" },
+  { value: "promptdeck", label: "PromptDeck" },
   { value: "lexend", label: "Lexend" },
   { value: "opendyslexic", label: "OpenDyslexic" },
 ];
 const LAYOUT_OPTIONS: Array<SelectOption<LayoutMode>> = [
   { value: "left", label: "Left aligned" },
   { value: "centered", label: "Left aligned, centered page" },
+];
+const BACKGROUND_MODE_OPTIONS: Array<SelectOption<BackgroundMode>> = [
+  { value: "black", label: "Black" },
+  { value: "spotlight", label: "Spotlight" },
+  { value: "white", label: "White" },
 ];
 const AI_PROVIDER_OPTIONS: Array<SelectOption<AiProvider>> = [
   { value: "auto", label: "Auto" },
@@ -238,9 +292,36 @@ const API_KEY_SERVICE_OPTIONS: Array<SelectOption<UserApiKeyService>> = [
   { value: "openrouter", label: "OpenRouter" },
   { value: "firecrawl", label: "Firecrawl" },
   { value: "elevenlabs", label: "ElevenLabs" },
+  { value: "r2", label: "Cloudflare R2" },
   { value: "mux", label: "Mux" },
   { value: "heygen", label: "HeyGen" },
 ];
+const API_MODEL_OPTIONS: Partial<Record<UserApiKeyService, Array<SelectOption<string>>>> = {
+  openai: [
+    { value: "", label: "Default: GPT-5.4 mini" },
+    { value: "gpt-5.4-mini", label: "GPT-5.4 mini" },
+    { value: "gpt-5.5", label: "GPT-5.5" },
+    { value: "gpt-5.4", label: "GPT-5.4" },
+  ],
+  claude: [
+    { value: "", label: "Default: Claude Sonnet 4.6" },
+    { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
+    { value: "claude-fable-5", label: "Claude Fable 5" },
+    { value: "claude-opus-4-8", label: "Claude Opus 4.8" },
+    { value: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
+  ],
+  openrouter: [
+    { value: "", label: "Default: OpenRouter Fusion" },
+    { value: "openrouter/fusion", label: "OpenRouter Fusion" },
+    { value: "anthropic/claude-fable-5", label: "Claude Fable 5" },
+    { value: "anthropic/claude-opus-4.8", label: "Claude Opus 4.8" },
+    { value: "openai/gpt-5.5", label: "OpenAI GPT-5.5" },
+    { value: "openai/gpt-5.4-mini", label: "OpenAI GPT-5.4 mini" },
+  ],
+  mux: [
+    { value: "", label: "Paste token ID manually" },
+  ],
+};
 const BUILD_KIND_OPTIONS: Array<SelectOption<BuildItemKind>> = [
   { value: "script", label: "Script" },
   { value: "video", label: "Video" },
@@ -288,12 +369,12 @@ const DEFAULT_RENDER_CHECKLIST = [
   "[ ] Cut edges stay on word boundaries",
   "[ ] 30ms audio fades planned at every cut",
   "[ ] Subtitles applied last",
-  "[ ] Preview render reviewed",
-  "[ ] Final render ready for Mux or download",
+  "[ ] R2 storage, Mux delivery, worker, and job table requirements reviewed",
+  "[ ] No render starts until video infrastructure exists",
 ].join("\n");
 const DEFAULT_SUBTITLE_STYLE = "Natural sentence case, 4-7 words per line, bottom center, high contrast, subtitles applied last.";
-const MODEL_KEY_SERVICES = new Set<UserApiKeyService>(["openai", "claude", "openrouter", "mux"]);
-const SITE_APP_KEY_SERVICES = new Set<UserApiKeyService>(["openrouter", "mux"]);
+const MODEL_KEY_SERVICES = new Set<UserApiKeyService>(["openai", "claude", "openrouter", "r2", "mux"]);
+const SITE_APP_KEY_SERVICES = new Set<UserApiKeyService>(["openrouter", "r2", "mux"]);
 const API_KEY_HELP: Record<UserApiKeyService, { keyLabel: string; modelLabel: string; modelPlaceholder: string; siteLabel: string; appLabel: string; help: string }> = {
   openai: {
     keyLabel: "API key",
@@ -335,6 +416,14 @@ const API_KEY_HELP: Record<UserApiKeyService, { keyLabel: string; modelLabel: st
     appLabel: "App name",
     help: "Used for narration voice features when voice mode is enabled.",
   },
+  r2: {
+    keyLabel: "Secret access key",
+    modelLabel: "Access key ID",
+    modelPlaceholder: "R2 access key ID",
+    siteLabel: "Account ID",
+    appLabel: "Bucket name",
+    help: "Setup-only for future video artifact storage. Rendering still needs workers, job tables, and R2 component wiring.",
+  },
   mux: {
     keyLabel: "Token secret",
     modelLabel: "Token ID",
@@ -352,6 +441,37 @@ const API_KEY_HELP: Record<UserApiKeyService, { keyLabel: string; modelLabel: st
     help: "Optional narration/avatar provider. HyperFrames itself renders locally or on workers.",
   },
 };
+const BYOK_REQUIREMENTS: Array<{ service: UserApiKeyService; label: string; required: string; use: string }> = [
+  { service: "openai", label: "OpenAI", required: "API key, optional model", use: "Generate scripts and rewrite for RSVP." },
+  { service: "claude", label: "Claude", required: "API key, optional model", use: "Generate scripts and rewrite for RSVP." },
+  { service: "openrouter", label: "OpenRouter", required: "API key, optional model, optional site URL/app name", use: "Route generation through OpenRouter. Use https://www.promptdeck.app as the site URL." },
+  { service: "firecrawl", label: "Firecrawl", required: "API key", use: "Scrape the first pasted URL or markdown link before generation." },
+  { service: "elevenlabs", label: "ElevenLabs", required: "API key", use: "Enable narration, voice, or transcription workflows when configured." },
+  { service: "r2", label: "Cloudflare R2", required: "Access key ID, secret access key, account ID, bucket name", use: "Prepare future storage for video artifacts after R2 component and job tables exist." },
+  { service: "mux", label: "Mux", required: "Token ID, token secret, webhook signing secret", use: "Prepare future video upload, delivery, playback, and webhook sync workflows." },
+  { service: "heygen", label: "HeyGen", required: "API key", use: "Optional avatar or external video generation provider." },
+];
+const PRIVACY_SECTIONS = [
+  ["Overview", "PromptDeck is an open source browser teleprompter for writing, organizing, and reading scripts. We collect the minimum data needed to run the hosted service. You own your content. We do not sell your data."],
+  ["Account data", "When you sign in with GitHub, PromptDeck stores the profile details GitHub shares with the app, such as your name, email when available, avatar, and authentication session records."],
+  ["Script and build data", "If you save content after signing in, PromptDeck stores your scripts, folders, Build items, custom Script Voice Profiles, default settings, and project notes in Convex under your user account."],
+  ["Bring your own keys", "If you save API keys for OpenAI, Claude, OpenRouter, Firecrawl, ElevenLabs, Mux, or HeyGen, the raw key is encrypted server-side before storage. The app only shows configured status later, not the raw key."],
+  ["How data is used", "Your data is used to provide saved libraries, generation features, URL scraping, narration setup, and video planning workflows. We do not train AI models on your saved scripts."],
+  ["Third-party services", "PromptDeck uses Convex for backend storage and GitHub OAuth through Convex Auth for login. Your own provider keys are used only when you choose features that call those providers."],
+  ["Deleting data", "You can delete saved scripts and Build items from the app. Signed-in users can delete their account from Account, which removes PromptDeck-owned app data tied to that user."],
+  ["Contact", "For privacy questions, open an issue at github.com/waynesutton/teleprompter."],
+] as const;
+const TERMS_SECTIONS = [
+  ["Agreement", "By using PromptDeck at www.promptdeck.app, you agree to these terms for the hosted service. The source code is open source; these terms cover the hosted app."],
+  ["Service", "PromptDeck provides script writing, live prompting, local drafting, saved libraries for signed-in users, optional AI generation, optional URL scraping, optional narration setup, and video planning tools."],
+  ["Your content", "You own the scripts, notes, prompts, Build items, and settings you create. You grant PromptDeck permission to store, process, and display that content only to provide the service to you."],
+  ["Your responsibilities", "Do not use PromptDeck for illegal activity, malicious content, unauthorized access, or content you do not have the right to store or process."],
+  ["Provider keys", "If you bring your own API keys, you are responsible for those provider accounts, usage, cost, and key rotation. Remove a key from Account if you no longer want PromptDeck to use it."],
+  ["Availability", "PromptDeck is provided as-is and may change, pause, or stop at any time. Use it at your own risk, especially for live production workflows."],
+  ["Liability", "To the maximum extent allowed by law, the maintainer is not liable for indirect, incidental, special, consequential, or punitive damages from using the hosted service."],
+  ["Governing law", "These terms are governed by the laws of California, United States, without regard to conflict of law rules."],
+  ["Contact", "For questions about these terms, open an issue at github.com/waynesutton/teleprompter."],
+] as const;
 const BUILT_IN_SCRIPT_VOICES: ScriptVoiceProfile[] = [
   {
     id: "builtin-natural",
@@ -448,10 +568,11 @@ const ABOUT_FEATURES = [
   ["RSVP reading", "Choose RSVP on Tab 1 to read one word at a time. The red ORP letter marks where your eyes should anchor, and WPM sets the pace."],
   ["Script editor", "Write, preview, format, save, load, export, and organize scripts."],
   ["Presentation defaults", "Save preferred font, color, layout, guide, and speed settings."],
-  ["Keyboard control", "Use shortcuts for playback, tabs, pages, sizing, speed, help, and undo."],
+  ["Keyboard control", "Use shortcuts for playback, tabs, pages, sizing, About, and undo."],
   ["Mini view", "Open a synced popup prompter for a compact recording view while keeping keyboard controls active."],
-  ["Build workspace", "Sign in to save scripts, videos, Build items, and Video Project Builder drafts. External keys are only needed for AI, URL scraping, transcription, narration, and rendering."],
-  ["Optional tools", "AI script generation, Firecrawl URL context, voice, transcription, and rendering depend on your saved provider keys or worker setup."],
+  ["Build workspace", "Sign in to generate scripts with your saved prompt rules and save Build items. Video tools are planning-only until render workers, R2, Mux, and job tables are wired."],
+  ["Skill-supported scripts", "Import or paste skill guidance in Account so generated scripts can follow a specific writing system."],
+  ["Optional tools", "AI script generation, Firecrawl URL context, voice, transcription, R2 storage, and Mux delivery depend on your saved provider keys or worker setup."],
   ["Open source", "The project is open source at github.com/waynesutton/teleprompter."],
 ] as const;
 
@@ -459,8 +580,8 @@ const APP_DOCS = [
   ["Prompter", "Read the current script live. Use Start, speed, page controls, fit, guide, mirror, RSVP, and the hide-bar control for recording."],
   ["Mini View", "Use the monitor icon on Tab 1 to open a compact movable prompter. It follows the active page, scroll/RSVP mode, playback state, and keyboard shortcuts."],
   ["Script", "Write or paste the source script, preview formatting, add page breaks, save scripts into folders, and export markdown."],
-  ["Build", "Sign in to save scripts, videos, and Video Project Builder drafts. Manual planning uses your pasted script text; URL scraping needs Firecrawl, AI assistance needs OpenAI, Claude, or OpenRouter, transcription needs a speech-to-text provider, and final video rendering needs an external worker/provider."],
-  ["Help", "Set defaults, review shortcuts, read app docs, and check the open source feature list."],
+  ["Build", "Sign in to generate scripts and save Build items. Video planning uses your pasted script text; URL scraping needs Firecrawl, AI assistance needs OpenAI, Claude, or OpenRouter, transcription needs a speech-to-text provider, and real rendering needs workers, R2, Mux, and job tables."],
+  ["About", "Review shortcuts, read app docs, and check the open source feature list."],
   ["Script Voice Profiles", "Choose a writing tone for AI-generated scripts. Built-in profiles work immediately, and custom profiles can be saved, edited, deleted, or imported from notes."],
   ["Narration Voice", "Audio narration is separate from script writing tone. It only becomes usable when your ElevenLabs key is saved."],
   ["RSVP Mode", "Switch Tab 1 to RSVP to show one word at a time with a red ORP pivot letter. AI is optional and only helps rewrite scripts for easier RSVP reading."],
@@ -471,26 +592,26 @@ const VIDEO_WORKFLOW_STEPS = [
   ["1. Gather", "Start from a link, markdown doc, pasted notes, saved script, or prompt. Firecrawl handles URL context when your key is saved."],
   ["2. Shape", "Use Script Voice Profiles to turn source material into a spoken script, outline, shot list, and caption-ready beats."],
   ["3. Plan", "Draft a transcript-first video project with an edit strategy, EDL JSON, subtitle style, render checklist, and persistent project memory."],
-  ["4. Compose", "Use HyperFrames for deterministic HTML-to-video compositions, or Remotion when you need React-based rendering and cloud workers."],
-  ["5. Store", "Use R2 for large render artifacts and Mux for upload, playback IDs, webhooks, thumbnails, and delivery."],
-  ["6. Review", "Track jobs in Convex, show status in real time, then send the finished script back to Prompter or save the video result."],
+  ["4. Prepare infrastructure", "Before real rendering, add workers, dedicated video job tables, R2 storage, and Mux delivery. Do not expose render controls before this exists."],
+  ["5. Store later", "Use R2 for large artifacts and Mux for upload, playback IDs, webhooks, thumbnails, and delivery after the storage and job pipeline is implemented."],
+  ["6. Review", "For now, save planning artifacts and send finished scripts back to Prompter. Real video status tracking starts only after job tables and workers exist."],
 ] as const;
 
 const VIDEO_PROVIDER_GUIDE = [
   ["Mux", "Video asset management, playback, direct uploads, webhooks, and streaming delivery. Use the Convex Mux component."],
   ["HyperFrames", "Agent-authored HTML videos from links, docs, scripts, and prompts. Render with CLI/workers, not inside Convex actions."],
   ["Remotion", "React-based video templates and cloud rendering on Lambda or Cloud Run."],
-  ["Cloudflare R2", "Large render outputs, frame bundles, source captures, and downloads before sending final assets to Mux."],
+  ["Cloudflare R2", "Future large artifact storage for MP4s, frames, audio, source captures, and downloads before sending final assets to Mux."],
   ["HeyGen", "Optional avatar or narration workflows. Keep it separate from the script-writing voice."],
 ] as const;
 
 const BUILD_REQUIREMENT_GUIDE = [
-  ["Save scripts, videos, or both", "Requires GitHub login. Saved Build items are private to your account."],
+  ["Save scripts, video plans, or both", "Requires GitHub login. Saved Build items are private to your account."],
   ["Transcript to strategy to EDL", "Requires GitHub login to save. Drafting from pasted script text works without an AI key after login."],
   ["URL or markdown-link context", "Requires GitHub login plus a saved Firecrawl API key."],
   ["AI-assisted script, strategy, or EDL", "Requires GitHub login plus a saved OpenAI, Claude, or OpenRouter API key."],
-  ["Word-level transcription", "Requires GitHub login plus a transcription provider such as ElevenLabs Scribe or a worker-backed speech-to-text service."],
-  ["Final video rendering", "Requires an external worker/provider such as HyperFrames, Remotion, ffmpeg, R2, and Mux. The browser does not render final MP4 files."],
+  ["Word-level transcription", "Future workflow. Requires GitHub login plus a transcription provider such as ElevenLabs Scribe or a worker-backed speech-to-text service."],
+  ["Final video rendering", "Not available yet. It requires render workers, R2 storage, Mux delivery, and dedicated Convex video job tables before any render button should exist."],
 ] as const;
 
 const SHORTCUTS = [
@@ -500,7 +621,7 @@ const SHORTCUTS = [
   ["Command/Ctrl + 1", "Open Prompter"],
   ["Command/Ctrl + 2", "Open Script"],
   ["Command/Ctrl + 3", "Open Build"],
-  ["Command/Ctrl + 4", "Open Help"],
+  ["Command/Ctrl + 4", "Open About"],
   ["Command/Ctrl + Z", "Undo the last script tool change on Tab 2"],
   ["M", "Open or focus the mini prompter view"],
   ["H or B", "Show or hide the Tab 1 control bar"],
@@ -577,9 +698,9 @@ const getVideoProjectPlan = (title: string, outputFormat: string, sourceText: st
     "1. Inventory source clips, links, docs, or scripts.",
     "2. Generate or import word-level transcript data.",
     "3. Pack transcript into a reading view for take selection.",
-    "4. Confirm the edit strategy before rendering.",
-    "5. Produce EDL JSON, subtitle plan, and render checklist.",
-    "6. Render through a future worker using ffmpeg, Remotion, HyperFrames, R2, and Mux.",
+    "4. Confirm the edit strategy before any future worker uses it.",
+    "5. Produce EDL JSON, subtitle plan, and setup checklist.",
+    "6. Do not render until workers, R2, Mux, and video job tables exist.",
   ].join("\n");
 
 const getVideoProjectEdl = (title: string, outputFormat: string, script: string) => {
@@ -605,8 +726,8 @@ const getVideoProjectEdl = (title: string, outputFormat: string, script: string)
       subtitles: "planned",
       overlays: [],
       render: {
-        engine: "future-worker",
-        notes: "Use per-segment extract, 30ms audio fades, subtitles last, then publish final asset to Mux.",
+        engine: "not_configured",
+        notes: "Planning only. Add workers, R2 storage, Mux delivery, and Convex video job tables before rendering.",
       },
     },
     null,
@@ -619,11 +740,14 @@ const getVideoProjectMemory = (title: string) =>
     `## Session 1 - ${new Date().toISOString().slice(0, 10)}`,
     `**Project:** ${title}`,
     "**Strategy:** Drafted a transcript-first video project workspace.",
-    "**Decisions:** Confirm strategy before rendering. Use transcript and EDL as the source of truth.",
-    "**Outstanding:** Add source clips, import word-level transcript data, review the EDL, then render with a worker.",
+    "**Decisions:** Confirm strategy before any worker uses it. Use transcript and EDL as the source of truth.",
+    "**Outstanding:** Add source clips, import word-level transcript data, review the EDL, then configure workers, R2, Mux, and job tables before rendering.",
   ].join("\n");
 
 const getFontClass = (fontFamily: PromptFont) => `font-${fontFamily}`;
+
+const normalizePromptFont = (fontFamily: string | undefined): PromptFont =>
+  PROMPT_FONTS.includes(fontFamily as PromptFont) ? (fontFamily as PromptFont) : DEFAULT_SETTINGS.fontFamily;
 
 const getFirstUrl = (input: string) => {
   const markdownUrl = input.match(/\[[^\]]+\]\((https?:\/\/[^)\s]+)\)/i)?.[1];
@@ -865,11 +989,14 @@ function App() {
   const buildItemsQuery = useQuery(api.buildItems.list, { status: "all" }) as BuildItem[] | undefined;
   const viewer = useQuery(api.users.getViewer);
   const apiKeyStatus = useQuery(api.userApiKeys.getStatus) as UserApiKeyStatus | undefined;
+  const aiPromptSettings = useQuery(api.aiPromptSettings.get) as AiPromptSettings | undefined;
   const getAiProviderStatus = useAction(api.aiScripts.getAiProviderStatus);
   const generateAiScript = useAction(api.aiScripts.generateScript);
   const rewriteScriptForRsvp = useAction(api.aiScripts.rewriteForRsvp);
+  const importSkillFromUrl = useAction(api.aiPromptImports.importSkillFromUrl);
   const getVoiceStatus = useAction(api.voice.getVoiceStatus);
   const saveUserApiKey = useAction(api.apiKeyActions.save);
+  const deleteCurrentAccount = useMutation(api.users.deleteCurrentAccount);
   const saveSharedScript = useMutation(api.teleprompter.saveSharedScript);
   const saveDefaultSettings = useMutation(api.teleprompter.saveDefaultSettings);
   const deleteSharedScript = useMutation(api.teleprompter.deleteSharedScript);
@@ -877,6 +1004,8 @@ function App() {
   const setBuildItemStatus = useMutation(api.buildItems.setStatus);
   const deleteBuildItem = useMutation(api.buildItems.remove);
   const removeUserApiKey = useMutation(api.userApiKeys.remove);
+  const saveAiPromptSettings = useMutation(api.aiPromptSettings.save);
+  const resetAiPromptSettings = useMutation(api.aiPromptSettings.reset);
   const saveScriptVoiceProfile = useMutation(api.scriptVoices.save);
   const deleteScriptVoiceProfile = useMutation(api.scriptVoices.remove);
   const [activeTab, setActiveTab] = useState<PromptTab>("prompter");
@@ -908,6 +1037,9 @@ function App() {
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isLoginRequiredModalOpen, setIsLoginRequiredModalOpen] = useState(false);
   const [loginRequiredMessage, setLoginRequiredMessage] = useState("Sign in with GitHub to use this feature.");
+  const [isDeleteAccountConfirmOpen, setIsDeleteAccountConfirmOpen] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [isNewScriptDialogOpen, setIsNewScriptDialogOpen] = useState(false);
   const [isScriptPreviewOpen, setIsScriptPreviewOpen] = useState(false);
   const [isAiGeneratorOpen, setIsAiGeneratorOpen] = useState(false);
@@ -930,20 +1062,30 @@ function App() {
   const [apiKeyMessage, setApiKeyMessage] = useState<string | null>(null);
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [isRemovingApiKey, setIsRemovingApiKey] = useState(false);
+  const [aiPromptDraft, setAiPromptDraft] = useState("");
+  const [aiPromptNotes, setAiPromptNotes] = useState("");
+  const [skillSourceUrl, setSkillSourceUrl] = useState("");
+  const [skillMarkdownDraft, setSkillMarkdownDraft] = useState("");
+  const [aiPromptMessage, setAiPromptMessage] = useState<string | null>(null);
+  const [isSavingAiPrompt, setIsSavingAiPrompt] = useState(false);
+  const [isImportingSkill, setIsImportingSkill] = useState(false);
   const [buildForm, setBuildForm] = useState(EMPTY_BUILD_FORM);
   const [editingBuildItemId, setEditingBuildItemId] = useState<Id<"buildItems"> | null>(null);
   const [buildMessage, setBuildMessage] = useState<string | null>(null);
+  const [isVideoProjectAdvancedOpen, setIsVideoProjectAdvancedOpen] = useState(false);
   const [isSavingBuildItem, setIsSavingBuildItem] = useState(false);
   const [isUpdatingBuildItem, setIsUpdatingBuildItem] = useState(false);
   const [buildPendingDeleteId, setBuildPendingDeleteId] = useState<Id<"buildItems"> | null>(null);
   const [aiModelOverride, setAiModelOverride] = useState("");
   const [aiInstructions, setAiInstructions] = useState("");
   const [aiMessage, setAiMessage] = useState<string | null>(null);
+  const [generatedScriptResult, setGeneratedScriptResult] = useState<GeneratedScriptResult | null>(null);
   const [aiSetupMessage, setAiSetupMessage] = useState("These options are not setup. Contact the app creator to config.");
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isCheckingVoiceStatus, setIsCheckingVoiceStatus] = useState(false);
   const [isVoiceModeRequested, setIsVoiceModeRequested] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
+  const [legalModal, setLegalModal] = useState<LegalModal | null>(null);
   const [isMiniViewOpen, setIsMiniViewOpen] = useState(false);
   const [miniViewFrame, setMiniViewFrame] = useState<MiniViewFrame>(() => getDefaultMiniViewFrame());
   const scriptRef = useRef<HTMLDivElement>(null);
@@ -971,6 +1113,21 @@ function App() {
   );
   const activeBuildCount = useMemo(() => buildItems.filter((item) => item.status === "active").length, [buildItems]);
   const archivedBuildCount = useMemo(() => buildItems.filter((item) => item.status === "archived").length, [buildItems]);
+  const buildGeneratorSource = useMemo(
+    () =>
+      [
+        buildForm.title ? `Title: ${buildForm.title}` : "",
+        buildForm.sourceText,
+        buildForm.scriptSnapshot,
+        buildForm.videoBrief,
+        buildForm.notes,
+      ]
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .join("\n\n"),
+    [buildForm.notes, buildForm.scriptSnapshot, buildForm.sourceText, buildForm.title, buildForm.videoBrief],
+  );
+  const getAiGeneratorSource = () => (activeTab === "build" ? buildGeneratorSource.trim() : draft.trim());
   const scriptVoiceProfiles = useMemo<ScriptVoiceProfile[]>(() => {
     const customProfiles = savedScriptVoiceProfiles.map((profile) => ({
       id: `custom:${profile._id}`,
@@ -1137,8 +1294,9 @@ function App() {
       speed: savedDefaultSettings.speed,
       speedMultiplier: savedDefaultSettings.speedMultiplier,
       textColor: savedDefaultSettings.textColor,
-      fontFamily: savedDefaultSettings.fontFamily,
+      fontFamily: normalizePromptFont(savedDefaultSettings.fontFamily),
       layoutMode: savedDefaultSettings.layoutMode,
+      backgroundMode: savedDefaultSettings.backgroundMode ?? DEFAULT_SETTINGS.backgroundMode,
       guide: savedDefaultSettings.guide,
       fitToWindow: savedDefaultSettings.fitToWindow,
       scroll: 0,
@@ -1196,11 +1354,23 @@ function App() {
       guide: savedPrompt.guide,
       fitToWindow: savedPrompt.fitToWindow,
       textColor: savedPrompt.textColor,
-      fontFamily: savedPrompt.fontFamily,
+      fontFamily: normalizePromptFont(savedPrompt.fontFamily),
       layoutMode: savedPrompt.layoutMode,
+      backgroundMode: savedPrompt.backgroundMode ?? DEFAULT_SETTINGS.backgroundMode,
     });
     setLastSavedAt(savedPrompt.updatedAt);
   }, [savedPrompt]);
+
+  useEffect(() => {
+    if (!aiPromptSettings) {
+      return;
+    }
+
+    setAiPromptDraft(aiPromptSettings.prompt);
+    setAiPromptNotes(aiPromptSettings.notes ?? "");
+    setSkillSourceUrl(aiPromptSettings.skillSourceUrl ?? "");
+    setSkillMarkdownDraft(aiPromptSettings.skillMarkdown ?? "");
+  }, [aiPromptSettings]);
 
   useEffect(() => {
     if (currentPageIndex > pages.length - 1) {
@@ -1593,6 +1763,20 @@ function App() {
       pages: pages.length,
     };
   }, [draft, pages.length]);
+  const currentYear = new Date().getFullYear();
+  const apiKeyModelOptions = useMemo<Array<SelectOption<string>>>(() => {
+    const options = API_MODEL_OPTIONS[apiKeyService] ?? [];
+
+    if (!MODEL_KEY_SERVICES.has(apiKeyService)) {
+      return [];
+    }
+
+    if (apiKeyModel && !options.some((option) => option.value === apiKeyModel)) {
+      return [{ value: apiKeyModel, label: `Custom: ${apiKeyModel}` }, ...options];
+    }
+
+    return options;
+  }, [apiKeyModel, apiKeyService]);
 
   const clearForNewScript = useCallback(() => {
     setDraftFromTool("");
@@ -1647,7 +1831,7 @@ function App() {
       }
       setSelectedSavedScriptId(savedId);
       setLastSavedAt(savedAt);
-      setLibraryMessage(`Saved "${title}" for everyone.`);
+      setLibraryMessage(`Saved "${title}" to your library.`);
       return true;
     } finally {
       setIsSavingScript(false);
@@ -1682,7 +1866,7 @@ function App() {
   };
 
   const openAiGenerator = async () => {
-    const source = draft.trim();
+    const source = getAiGeneratorSource();
     setAiMessage(null);
 
     if (!requireLogin("Sign in with GitHub and add your API keys to generate scripts.")) {
@@ -1690,7 +1874,7 @@ function App() {
     }
 
     if (!source) {
-      setAiMessage("Add a topic, notes, URL, or markdown link before generating.");
+      setAiMessage("Add a topic, notes, URL, markdown link, script, or video brief before generating.");
       return;
     }
 
@@ -1705,8 +1889,8 @@ function App() {
       if (nextStatus.providers.length === 0 || (hasUrl && !nextStatus.hasFirecrawl)) {
         setAiSetupMessage(
           hasUrl && !nextStatus.hasFirecrawl
-            ? "Add your Firecrawl API key in Build settings before generating from a URL."
-            : "Add an OpenAI, Claude, or OpenRouter API key in Build settings.",
+            ? "Add your Firecrawl API key in Account settings before generating from a URL."
+            : "Add an OpenAI, Claude, or OpenRouter API key in Account settings.",
         );
         setIsAiSetupModalOpen(true);
         return;
@@ -1750,6 +1934,36 @@ function App() {
     void signIn("github", { redirectTo: window.location.pathname || "/" });
   };
 
+  const signOutFromAccount = async () => {
+    setAccountMessage(null);
+    await signOut();
+    setActiveTab("prompter");
+    setIsDeleteAccountConfirmOpen(false);
+  };
+
+  const deleteSignedInAccount = async () => {
+    setAccountMessage(null);
+    setIsDeletingAccount(true);
+
+    try {
+      const result = await deleteCurrentAccount();
+      setAccountMessage(result.message);
+
+      if (result.ok) {
+        try {
+          await signOut();
+        } catch {
+          // The account deletion removes the active auth session, so signOut can be a no-op.
+        }
+
+        setIsDeleteAccountConfirmOpen(false);
+        setActiveTab("prompter");
+      }
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   const saveSelectedApiKey = async () => {
     if (!requireLogin("Sign in with GitHub to save your API keys.")) {
       return;
@@ -1789,6 +2003,84 @@ function App() {
       setApiKeyMessage(didRemove ? "API key removed." : "No saved API key found for that service.");
     } finally {
       setIsRemovingApiKey(false);
+    }
+  };
+
+  const saveScriptGeneratorPrompt = async () => {
+    if (!requireLogin("Sign in with GitHub to save your script generator prompt.")) {
+      return;
+    }
+
+    setAiPromptMessage(null);
+    setIsSavingAiPrompt(true);
+
+    try {
+      const result = await saveAiPromptSettings({
+        prompt: aiPromptDraft,
+        skillSourceUrl: skillSourceUrl.trim() || undefined,
+        skillMarkdown: skillMarkdownDraft.trim() || undefined,
+        notes: aiPromptNotes.trim() || undefined,
+        updatedAt: Date.now(),
+      });
+      setAiPromptMessage(result.message);
+    } finally {
+      setIsSavingAiPrompt(false);
+    }
+  };
+
+  const resetScriptGeneratorPrompt = async () => {
+    if (!requireLogin("Sign in with GitHub to reset your script generator prompt.")) {
+      return;
+    }
+
+    setAiPromptMessage(null);
+    setIsSavingAiPrompt(true);
+
+    try {
+      const result = await resetAiPromptSettings({ updatedAt: Date.now() });
+      setAiPromptMessage(result.message);
+
+      if (aiPromptSettings) {
+        setAiPromptDraft(aiPromptSettings.defaultPrompt);
+        setAiPromptNotes("");
+        setSkillSourceUrl("");
+        setSkillMarkdownDraft("");
+      }
+    } finally {
+      setIsSavingAiPrompt(false);
+    }
+  };
+
+  const copyScriptGeneratorPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(aiPromptDraft);
+      setAiPromptMessage("Prompt copied.");
+    } catch {
+      setAiPromptMessage("Could not copy the prompt in this browser.");
+    }
+  };
+
+  const importSkillGuidance = async () => {
+    if (!requireLogin("Sign in with GitHub and add Firecrawl to import a skill URL.")) {
+      return;
+    }
+
+    setAiPromptMessage(null);
+    setIsImportingSkill(true);
+
+    try {
+      const result = (await importSkillFromUrl({ url: skillSourceUrl })) as SkillImportResult;
+
+      if (!result.ok) {
+        setAiPromptMessage(result.message);
+        return;
+      }
+
+      setSkillMarkdownDraft(result.skillMarkdown);
+      setSkillSourceUrl(result.skillSourceUrl);
+      setAiPromptMessage(result.message);
+    } finally {
+      setIsImportingSkill(false);
     }
   };
 
@@ -2045,13 +2337,14 @@ function App() {
   };
 
   const generateScriptFromAi = async () => {
-    const source = draft.trim();
+    const source = getAiGeneratorSource();
     if (!source) {
-      setAiMessage("Add a topic, notes, URL, or markdown link before generating.");
+      setAiMessage("Add a topic, notes, URL, markdown link, script, or video brief before generating.");
       return;
     }
 
     setAiMessage(null);
+    setGeneratedScriptResult(null);
     setIsGeneratingScript(true);
 
     try {
@@ -2085,18 +2378,45 @@ function App() {
         return;
       }
 
-      setDraftFromTool(result.script);
-      setCurrentPageIndex(0);
-      resetScroll();
-
-      if (!scriptTitle.trim()) {
-        setScriptTitle(getDefaultScriptTitle(result.script));
-      }
-
-      setIsAiGeneratorOpen(false);
-      setAiMessage(`Generated with ${result.model}.`);
+      setGeneratedScriptResult({
+        script: result.script,
+        model: result.model,
+        provider: result.provider,
+        usedUrl: result.usedUrl,
+      });
+      setAiMessage(`Generated with ${result.model}. Review it, then send it to Script.`);
     } finally {
       setIsGeneratingScript(false);
+    }
+  };
+
+  const sendGeneratedScriptToEditor = () => {
+    if (!generatedScriptResult) {
+      return;
+    }
+
+    setDraftFromTool(generatedScriptResult.script);
+    setCurrentPageIndex(0);
+    resetScroll();
+
+    if (!scriptTitle.trim()) {
+      setScriptTitle(getDefaultScriptTitle(generatedScriptResult.script));
+    }
+
+    setIsAiGeneratorOpen(false);
+    setAiMessage(`Sent generated script from ${generatedScriptResult.model} to Script.`);
+  };
+
+  const copyGeneratedScript = async () => {
+    if (!generatedScriptResult) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(generatedScriptResult.script);
+      setAiMessage("Generated script copied.");
+    } catch {
+      setAiMessage("Could not copy the generated script in this browser.");
     }
   };
 
@@ -2207,14 +2527,27 @@ function App() {
     });
   };
 
-  const exportMarkdown = () => {
-    const blob = new Blob([draft], { type: "text/markdown;charset=utf-8" });
+  const downloadMarkdown = (content: string, title: string) => {
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = getSafeMarkdownFileName(scriptTitle || getDefaultScriptTitle(draft));
+    link.download = getSafeMarkdownFileName(title || getDefaultScriptTitle(content));
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const exportMarkdown = () => {
+    downloadMarkdown(draft, scriptTitle || getDefaultScriptTitle(draft));
+  };
+
+  const exportGeneratedMarkdown = () => {
+    if (!generatedScriptResult) {
+      return;
+    }
+
+    downloadMarkdown(generatedScriptResult.script, scriptTitle || getDefaultScriptTitle(generatedScriptResult.script));
+    setAiMessage("Generated script saved as Markdown.");
   };
 
   const saveCurrentDefaults = async () => {
@@ -2233,6 +2566,7 @@ function App() {
         textColor: settings.textColor,
         fontFamily: settings.fontFamily,
         layoutMode: settings.layoutMode,
+        backgroundMode: settings.backgroundMode,
         guide: settings.guide,
         fitToWindow: settings.fitToWindow,
         updatedAt: savedAt,
@@ -2361,23 +2695,31 @@ function App() {
           className={activeTab === "help" ? "tab has-tooltip is-active" : "tab has-tooltip"}
           onClick={() => setActiveTab("help")}
           aria-current={activeTab === "help" ? "page" : undefined}
-          title="Open help and default settings"
-          data-tooltip="Help and settings"
+          title="Open About"
+          data-tooltip="About"
           type="button"
         >
           <Question size={16} weight="bold" />
-          <span>Help</span>
+          <span>About</span>
         </button>
         {isAuthenticated ? (
           <button
-            className="tab account-tab has-tooltip"
+            className={activeTab === "account" ? "tab account-tab has-tooltip is-active is-icon-only" : "tab account-tab has-tooltip is-icon-only"}
             type="button"
-            onClick={() => void signOut()}
-            title={`Signed in as ${viewer?.name ?? viewer?.email ?? "GitHub user"}. Click to sign out.`}
-            data-tooltip="Sign out"
-            aria-label={`Signed in as ${viewer?.name ?? viewer?.email ?? "GitHub user"}. Sign out.`}
+            onClick={() => {
+              setAccountMessage(null);
+              setActiveTab("account");
+            }}
+            aria-current={activeTab === "account" ? "page" : undefined}
+            title={`Signed in as ${viewer?.name ?? viewer?.email ?? "GitHub user"}. Open account.`}
+            data-tooltip="Account"
+            aria-label={`Signed in as ${viewer?.name ?? viewer?.email ?? "GitHub user"}. Open account.`}
           >
-            <GithubLogo size={16} weight="bold" />
+            {viewer?.image ? (
+              <img className="account-tab-avatar" src={viewer.image} alt="" />
+            ) : (
+              <UserCircle size={16} weight="bold" />
+            )}
             <span>{viewer?.name ?? viewer?.email ?? "Account"}</span>
           </button>
         ) : (
@@ -2396,11 +2738,42 @@ function App() {
       </div>
     </nav>
   );
+  const pageFooter = (
+    <footer className="app-footer" aria-label="App footer">
+      <span>
+        © {currentYear} PromptDeck by{" "}
+        <a href="https://waynesutton.ai" target="_blank" rel="noreferrer">
+          waynesutton.ai
+        </a>
+      </span>
+      <a href="https://github.com/waynesutton/teleprompter" target="_blank" rel="noreferrer">
+        Open source
+      </a>
+      <a href="https://convex.dev" target="_blank" rel="noreferrer">
+        Powered by Convex
+      </a>
+      <button type="button" onClick={() => setLegalModal("terms")}>
+        Terms
+      </button>
+      <button type="button" onClick={() => setLegalModal("privacy")}>
+        Privacy
+      </button>
+    </footer>
+  );
 
   return (
     <main className="app-shell">
       {activeTab === "prompter" ? (
-        <section className={isPrompterDockVisible ? "prompter-stage" : "prompter-stage is-dock-hidden"} aria-label="Teleprompter">
+        <section
+          className={[
+            "prompter-stage",
+            `background-${settings.backgroundMode}`,
+            isPrompterDockVisible ? "" : "is-dock-hidden",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          aria-label="Teleprompter"
+        >
           {settings.guide ? <div className="read-guide" aria-hidden="true" /> : null}
           <div
             ref={scriptRef}
@@ -2629,6 +3002,25 @@ function App() {
                   </button>
                   {isPrompterOptionsOpen ? (
                     <div className="gear-menu" role="menu" aria-label="Prompter options">
+                      <div className="gear-menu-group" aria-label="Background">
+                        <span className="gear-menu-label">Background</span>
+                        {BACKGROUND_MODE_OPTIONS.map((option) => (
+                          <button
+                            className={settings.backgroundMode === option.value ? "gear-menu-item is-active" : "gear-menu-item"}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={settings.backgroundMode === option.value}
+                            key={option.value}
+                            onClick={() => {
+                              updateSetting("backgroundMode", option.value);
+                              setIsPrompterOptionsOpen(false);
+                            }}
+                          >
+                            <Layout size={16} weight="bold" />
+                            <span>{option.label}</span>
+                          </button>
+                        ))}
+                      </div>
                       <button
                         className={settings.fitToWindow ? "gear-menu-item is-active" : "gear-menu-item"}
                         type="button"
@@ -2671,6 +3063,15 @@ function App() {
                       >
                         <SlidersHorizontal size={16} weight="bold" />
                         <span>Reading guide</span>
+                      </button>
+                      <button
+                        className={isStageMeterVisible ? "gear-menu-item is-active" : "gear-menu-item"}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => setIsStageMeterVisible((current) => !current)}
+                      >
+                        <Gauge size={16} weight="bold" />
+                        <span>{isStageMeterVisible ? "Hide counter" : "Show counter"}</span>
                       </button>
                       <button
                         className="gear-menu-item"
@@ -2740,7 +3141,7 @@ function App() {
                   type="button"
                   onClick={saveScriptToLibrary}
                   disabled={isSavingScript}
-                  title="Save this script to the shared library"
+                  title="Save this script to your library"
                   data-tooltip="Save to Library"
                 >
                   <FloppyDisk size={17} weight="bold" />
@@ -2750,8 +3151,12 @@ function App() {
             </div>
 
             <div className="script-toolbar" aria-label="Script formatting">
+              <div className="toolbar-intro">
+                <span>Formatting tools</span>
+                <p>Choose how the script appears in Prompter. Whole script changes every line; selected text marks only the words you highlight.</p>
+              </div>
               <div className="toolbar-group">
-                <span>Whole text</span>
+                <span>Whole script color</span>
                 <div className="segmented-control">
                   {TEXT_COLORS.map((color) => (
                     <button
@@ -2768,7 +3173,7 @@ function App() {
                 </div>
               </div>
               <div className="toolbar-group">
-                <span>Selection</span>
+                <span>Selected text tools</span>
                 <div className="inline-tools">
                   {TEXT_COLORS.filter((color) => color.value !== "white").map((color) => (
                     <button
@@ -2789,7 +3194,7 @@ function App() {
                     title="Insert a page break at the cursor"
                     data-tooltip="Insert page break"
                   >
-                    Page Break
+                    Add Page Break
                   </button>
                 </div>
               </div>
@@ -2844,86 +3249,97 @@ function App() {
               <span>{draftStats.pages} pages</span>
             </div>
             <p className="editor-note">Use `---` on its own line to create pages. Selected color uses safe markdown-compatible span tags.</p>
-            <div className="script-library" aria-label="Shared script library">
+            <div className="script-library" aria-label="Your script library">
               <div>
                 <p className="eyebrow">Your library</p>
                 <h2>Save and load your scripts.</h2>
+                <p className="panel-copy">Saved scripts and folders are private to your GitHub account.</p>
               </div>
-              <div className="library-grid">
-                <label className="field-control" htmlFor="script-title">
-                  <span>Script title</span>
-                  <input
-                    id="script-title"
-                    type="text"
-                    value={scriptTitle}
-                    onChange={(event) => setScriptTitle(event.target.value)}
-                  />
-                </label>
-                <label className="field-control" htmlFor="script-folder">
-                  <span>Folder</span>
-                  <input
-                    id="script-folder"
-                    type="text"
-                    value={scriptFolder}
-                    onChange={(event) => setScriptFolder(event.target.value)}
-                    placeholder="No folder"
-                  />
-                </label>
-                <button
-                  className="save-button has-tooltip"
-                  type="button"
-                  onClick={saveScriptToLibrary}
-                  disabled={isSavingScript}
-                  title="Save this script to the shared library"
-                  data-tooltip="Save script"
-                >
-                  <FloppyDisk size={17} weight="bold" />
-                  {isSavingScript ? "Saving" : "Save Script"}
-                </button>
-                <div className="field-control">
-                  <span>Saved folder</span>
-                  <CustomSelect
-                    ariaLabel="Saved folder"
-                    value={savedFolderFilter}
-                    options={savedFolderOptions}
-                    onChange={(value) => {
-                      setSavedFolderFilter(value);
-                      setSelectedSavedScriptId("");
-                    }}
-                  />
+              {isAuthenticated ? (
+                <div className="library-grid">
+                  <label className="field-control" htmlFor="script-title">
+                    <span>Script title</span>
+                    <input
+                      id="script-title"
+                      type="text"
+                      value={scriptTitle}
+                      onChange={(event) => setScriptTitle(event.target.value)}
+                    />
+                  </label>
+                  <label className="field-control" htmlFor="script-folder">
+                    <span>Folder</span>
+                    <input
+                      id="script-folder"
+                      type="text"
+                      value={scriptFolder}
+                      onChange={(event) => setScriptFolder(event.target.value)}
+                      placeholder="No folder"
+                    />
+                  </label>
+                  <button
+                    className="save-button has-tooltip"
+                    type="button"
+                    onClick={saveScriptToLibrary}
+                    disabled={isSavingScript}
+                    title="Save this script to your library"
+                    data-tooltip="Save script"
+                  >
+                    <FloppyDisk size={17} weight="bold" />
+                    {isSavingScript ? "Saving" : "Save Script"}
+                  </button>
+                  <div className="field-control">
+                    <span>Saved folder</span>
+                    <CustomSelect
+                      ariaLabel="Saved folder"
+                      value={savedFolderFilter}
+                      options={savedFolderOptions}
+                      onChange={(value) => {
+                        setSavedFolderFilter(value);
+                        setSelectedSavedScriptId("");
+                      }}
+                    />
+                  </div>
+                  <div className="field-control is-wide">
+                    <span>Saved scripts</span>
+                    <CustomSelect
+                      ariaLabel="Saved scripts"
+                      value={selectedSavedScriptId}
+                      options={savedScriptOptions}
+                      onChange={setSelectedSavedScriptId}
+                    />
+                  </div>
+                  <button
+                    className="save-button has-tooltip"
+                    type="button"
+                    onClick={loadSelectedScript}
+                    disabled={!selectedSavedScript}
+                    title="Load the selected script"
+                    data-tooltip="Load script"
+                  >
+                    <FolderOpen size={17} weight="bold" />
+                    Load Script
+                  </button>
+                  <button
+                    className="danger-button has-tooltip"
+                    type="button"
+                    onClick={requestDeleteSelectedScript}
+                    disabled={!selectedSavedScript || isDeletingScript}
+                    title="Delete the selected script"
+                    data-tooltip="Delete script"
+                  >
+                    <Trash size={17} weight="bold" />
+                    Delete Script
+                  </button>
                 </div>
-                <div className="field-control is-wide">
-                  <span>Saved scripts</span>
-                  <CustomSelect
-                    ariaLabel="Saved scripts"
-                    value={selectedSavedScriptId}
-                    options={savedScriptOptions}
-                    onChange={setSelectedSavedScriptId}
-                  />
+              ) : (
+                <div className="login-inline-panel">
+                  <p>Log in to save, load, delete, and organize scripts in folders. You can still write, preview, start a new script, and export Markdown without an account.</p>
+                  <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
+                    <GithubLogo size={17} weight="bold" />
+                    Sign in with GitHub
+                  </button>
                 </div>
-                <button
-                  className="save-button has-tooltip"
-                  type="button"
-                  onClick={loadSelectedScript}
-                  disabled={!selectedSavedScript}
-                  title="Load the selected shared script"
-                  data-tooltip="Load script"
-                >
-                  <FolderOpen size={17} weight="bold" />
-                  Load Script
-                </button>
-                <button
-                  className="danger-button has-tooltip"
-                  type="button"
-                  onClick={requestDeleteSelectedScript}
-                  disabled={!selectedSavedScript || isDeletingScript}
-                  title="Delete the selected shared script"
-                  data-tooltip="Delete script"
-                >
-                  <Trash size={17} weight="bold" />
-                  Delete Script
-                </button>
-              </div>
+              )}
               {libraryMessage ? <p className="library-message">{libraryMessage}</p> : null}
               {deleteMessage ? <p className="library-message">{deleteMessage}</p> : null}
             </div>
@@ -2933,7 +3349,7 @@ function App() {
                   <p className="eyebrow">Delete script</p>
                   <h2 id="delete-title">Remove from library?</h2>
                   <p id="delete-copy">
-                    This deletes "{savedScripts.find((script) => script._id === scriptPendingDeleteId)?.title}" for everyone.
+                    This deletes "{savedScripts.find((script) => script._id === scriptPendingDeleteId)?.title}" from your library.
                   </p>
                 </div>
                 <div className="popover-actions">
@@ -2952,6 +3368,7 @@ function App() {
               <span>{pages.length} pages</span>
               <span>{lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}` : "Not saved yet"}</span>
             </div>
+            {pageFooter}
           </section>
           {tabs}
         </>
@@ -2961,8 +3378,8 @@ function App() {
             <div className="editor-header">
               <div>
                 <p className="eyebrow">Build</p>
-                <h1>Generate scripts. Plan videos.</h1>
-                <p className="panel-copy">Build is for signed-in users. Save your own keys to generate scripts, scrape links, prepare narration, and plan video builds from links, docs, scripts, or prompts.</p>
+                <h1>Generate scripts.</h1>
+                <p className="panel-copy">Build is for signed-in users. Add source material, choose your AI setup, and create a teleprompter-ready script. Video work below is planning-only until workers, R2, Mux, and job tables exist.</p>
               </div>
               {!isAuthenticated ? (
                 <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
@@ -2972,140 +3389,18 @@ function App() {
               ) : null}
             </div>
 
-            <div className="ai-generate-panel" aria-label="AI script generator">
-              <div>
-                <p className="eyebrow">Script generator</p>
-                <h2>Turn a topic, notes, URL, or markdown link into a prompt-ready script.</h2>
-                <p className="panel-copy">Uses the current Script text as source material. Firecrawl adds URL context when your key is saved.</p>
-              </div>
-              <button
-                className="save-button has-tooltip is-primary-action"
-                type="button"
-                onClick={openAiGenerator}
-                disabled={isCheckingAiSetup || isGeneratingScript}
-                title="Generate a script from the current text"
-                data-tooltip="Generate script"
-              >
-                <Sparkle size={17} weight="bold" />
-                {isCheckingAiSetup ? "Checking" : "Generate Script"}
-              </button>
-            </div>
-
-            <div className="api-settings-panel" aria-label="Script generator settings">
+            <section className="creator-console-panel" aria-label="Script creator console">
               <div className="api-settings-header">
                 <div>
-                  <p className="eyebrow">BYOK settings</p>
-                  <h2>Bring your own keys.</h2>
-                  <p className="panel-copy">{API_KEY_HELP[apiKeyService].help}</p>
-                </div>
-                {!isAuthenticated ? (
-                  <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
-                    <GithubLogo size={17} weight="bold" />
-                    Sign in
-                  </button>
-                ) : null}
-              </div>
-              <div className="api-key-status-list" aria-label="API key status">
-                {(apiKeyStatus?.keys ?? []).map((key) => (
-                  <span className={key.isConfigured ? "api-key-chip is-configured" : "api-key-chip"} key={key.service}>
-                    {API_KEY_SERVICE_OPTIONS.find((option) => option.value === key.service)?.label ?? key.service}
-                    {key.isConfigured ? " saved" : " missing"}
-                  </span>
-                ))}
-              </div>
-              {isAuthenticated ? (
-                <div className="api-key-grid">
-                  <div className="field-control">
-                    <span>Service</span>
-                    <CustomSelect
-                      ariaLabel="API key service"
-                      value={apiKeyService}
-                      options={API_KEY_SERVICE_OPTIONS}
-                      onChange={(value) => {
-                        setApiKeyService(value);
-                        const saved = apiKeyStatus?.keys.find((key) => key.service === value);
-                        setApiKeyModel(saved?.model ?? "");
-                        setApiKeySiteUrl(saved?.siteUrl ?? "");
-                        setApiKeyAppName(saved?.appName ?? "");
-                        setApiKeyMessage(null);
-                      }}
-                    />
-                  </div>
-                  <label className="field-control" htmlFor="api-key-value">
-                    <span>{API_KEY_HELP[apiKeyService].keyLabel}</span>
-                    <input
-                      id="api-key-value"
-                      type="password"
-                      value={apiKeyValue}
-                      onChange={(event) => setApiKeyValue(event.target.value)}
-                      placeholder="Paste key to save or replace"
-                    />
-                  </label>
-                  {MODEL_KEY_SERVICES.has(apiKeyService) ? (
-                    <label className="field-control" htmlFor="api-key-model">
-                      <span>{API_KEY_HELP[apiKeyService].modelLabel}</span>
-                      <input
-                        id="api-key-model"
-                        type="text"
-                        value={apiKeyModel}
-                        onChange={(event) => setApiKeyModel(event.target.value)}
-                        placeholder={API_KEY_HELP[apiKeyService].modelPlaceholder}
-                      />
-                    </label>
-                  ) : null}
-                  {SITE_APP_KEY_SERVICES.has(apiKeyService) ? (
-                    <>
-                      <label className="field-control" htmlFor="api-key-site-url">
-                        <span>{API_KEY_HELP[apiKeyService].siteLabel}</span>
-                        <input
-                          id="api-key-site-url"
-                          type="text"
-                          value={apiKeySiteUrl}
-                          onChange={(event) => setApiKeySiteUrl(event.target.value)}
-                          placeholder={apiKeyService === "mux" ? "Mux webhook signing secret" : "https://befitting-dodo-95.convex.site"}
-                        />
-                      </label>
-                      <label className="field-control" htmlFor="api-key-app-name">
-                        <span>{API_KEY_HELP[apiKeyService].appLabel}</span>
-                        <input
-                          id="api-key-app-name"
-                          type="text"
-                          value={apiKeyAppName}
-                          onChange={(event) => setApiKeyAppName(event.target.value)}
-                          placeholder={apiKeyService === "mux" ? "stream.mux.com" : "Teleprompt"}
-                        />
-                      </label>
-                    </>
-                  ) : null}
-                  <button className="save-button" type="button" onClick={saveSelectedApiKey} disabled={isSavingApiKey}>
-                    <FloppyDisk size={17} weight="bold" />
-                    {isSavingApiKey ? "Saving" : "Save Key"}
-                  </button>
-                  <button className="danger-button" type="button" onClick={removeSelectedApiKey} disabled={isRemovingApiKey}>
-                    <Trash size={17} weight="bold" />
-                    {isRemovingApiKey ? "Removing" : "Remove Key"}
-                  </button>
-                </div>
-              ) : (
-                <p className="editor-note">Sign in to save provider keys. Raw keys are encrypted in Convex and never shown again.</p>
-              )}
-              {apiKeyMessage ? <p className="library-message">{apiKeyMessage}</p> : null}
-            </div>
-            {aiMessage ? <p className="library-message">{aiMessage}</p> : null}
-
-            <section className="settings-panel build-library-panel" aria-label="Build library">
-              <div className="api-settings-header">
-                <div>
-                  <p className="eyebrow">Build library</p>
-                  <h2>Save scripts, videos, or both.</h2>
-                  <p className="panel-copy">Sign in with GitHub to save private Build items, video project plans, and rendering notes. Active items stay in the workspace; archived items stay out of the way until restored.</p>
+                  <p className="eyebrow">Script creator</p>
+                  <h2>Add source. Generate a script.</h2>
+                  <p className="panel-copy">Paste a topic, link, doc note, or rough outline. Script generation requires GitHub login plus a saved OpenAI, Claude, or OpenRouter key. URL context also needs Firecrawl in Account.</p>
                 </div>
                 <div className="build-summary">
                   <span>{activeBuildCount} active</span>
                   <span>{archivedBuildCount} archived</span>
                 </div>
               </div>
-
               <div className="build-form-grid">
                 <label className="field-control" htmlFor="build-title">
                   <span>Title</span>
@@ -3114,7 +3409,7 @@ function App() {
                     type="text"
                     value={buildForm.title}
                     onChange={(event) => setBuildForm((current) => ({ ...current, title: event.target.value }))}
-                    placeholder="Product update video"
+                    placeholder="Product update script"
                   />
                 </label>
                 <div className="field-control">
@@ -3135,64 +3430,135 @@ function App() {
                     onChange={(value) => setBuildForm((current) => ({ ...current, sourceType: value }))}
                   />
                 </div>
-                <label className="field-control is-wide" htmlFor="build-source">
-                  <span>Prompt, link, or doc reference</span>
-                  <input
+                <label className="field-control build-textarea-field is-wide" htmlFor="build-source">
+                  <span>Prompt, link, doc reference, or notes</span>
+                  <textarea
                     id="build-source"
-                    type="text"
                     value={buildForm.sourceText}
                     onChange={(event) => setBuildForm((current) => ({ ...current, sourceText: event.target.value }))}
-                    placeholder="Paste a URL, doc title, prompt, or content brief"
+                    placeholder="Paste a URL, doc title, topic, outline, or notes for the script"
                   />
                 </label>
                 <label className="field-control build-textarea-field" htmlFor="build-script">
-                  <span>Script snapshot</span>
+                  <span>Script draft</span>
                   <textarea
                     id="build-script"
                     value={buildForm.scriptSnapshot}
                     onChange={(event) => setBuildForm((current) => ({ ...current, scriptSnapshot: event.target.value }))}
-                    placeholder="Use current Script text, paste a script, or leave blank for video-only planning"
+                    placeholder="Use current Script text, paste a draft, or leave blank until generation"
                   />
                 </label>
                 <label className="field-control build-textarea-field" htmlFor="build-video-brief">
-                  <span>Video brief</span>
+                  <span>Optional video planning note</span>
                   <textarea
                     id="build-video-brief"
                     value={buildForm.videoBrief}
                     onChange={(event) => setBuildForm((current) => ({ ...current, videoBrief: event.target.value }))}
-                    placeholder="Describe format, visuals, aspect ratio, captions, narration, and expected output"
+                    placeholder="Optional: format, visuals, captions, narration, and setup notes. This does not render video."
                   />
                 </label>
+              </div>
+              <div className="build-generator-card" aria-label="Script generator">
+                <div>
+                  <p className="eyebrow">Script generator</p>
+                  <h2>Generate from the source above.</h2>
+                  <p className="panel-copy">Requires login and a saved AI provider key. If a URL is present, Firecrawl must be saved in Account settings.</p>
+                </div>
+                <button
+                  className="save-button has-tooltip is-primary-action"
+                  type="button"
+                  onClick={openAiGenerator}
+                  disabled={!buildGeneratorSource.trim() || isCheckingAiSetup || isGeneratingScript}
+                  title="Generate a script from the Build source"
+                  data-tooltip="Generate script"
+                >
+                  <Sparkle size={17} weight="bold" />
+                  {isCheckingAiSetup ? "Checking" : "Generate Script"}
+                </button>
+              </div>
+            </section>
+            {aiMessage ? <p className="library-message">{aiMessage}</p> : null}
+
+            <section className="settings-panel video-build-panel" aria-label="Video planning setup">
+              <div className="api-settings-header">
+                <div>
+                  <p className="eyebrow">Video planning</p>
+                  <h2>Plan video work after the script.</h2>
+                  <p className="panel-copy">Video planning is a logged-in feature for saving briefs, transcript notes, EDL drafts, and setup checklists. Real rendering is not available until render workers, R2 storage, Mux delivery, and Convex video job tables exist.</p>
+                </div>
+                <button
+                  className="save-button"
+                  type="button"
+                  onClick={() => {
+                    if (!requireLogin("Sign in with GitHub to configure video planning and provider keys.")) {
+                      return;
+                    }
+                    setActiveTab("account");
+                    setApiKeyMessage("Configure Firecrawl, AI providers, R2, Mux, and optional voice/avatar keys before future video workflows.");
+                  }}
+                >
+                  <Article size={17} weight="bold" />
+                  Account Setup
+                </button>
+              </div>
+              <div className="build-requirement-grid" aria-label="Video setup requirements">
+                {BUILD_REQUIREMENT_GUIDE.map(([title, copy]) => (
+                  <article className="build-requirement-card" key={title}>
+                    <h3>{title}</h3>
+                    <p>{copy}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className="settings-panel build-library-panel" aria-label="Build library">
+              <div className="api-settings-header">
+                <div>
+                  <p className="eyebrow">Build library</p>
+                  <h2>Save scripts, videos, or both.</h2>
+                  <p className="panel-copy">Sign in with GitHub to save private script drafts, video planning notes, or combined Build items. Active items stay in the workspace; archived items stay out of the way until restored.</p>
+                </div>
+                <div className="build-summary">
+                  <span>{activeBuildCount} active</span>
+                  <span>{archivedBuildCount} archived</span>
+                </div>
+              </div>
+
+              <div className="build-library-controls">
                 <label className="field-control build-textarea-field" htmlFor="build-notes">
                   <span>Notes</span>
                   <textarea
                     id="build-notes"
                     value={buildForm.notes}
                     onChange={(event) => setBuildForm((current) => ({ ...current, notes: event.target.value }))}
-                    placeholder="Status, next step, render notes, or approval comments"
+                    placeholder="Status, next step, setup notes, or approval comments"
                   />
                 </label>
               </div>
 
-              <section className="video-project-panel" aria-label="Video Project Builder">
+              <button
+                className={isVideoProjectAdvancedOpen ? "advanced-toggle is-open" : "advanced-toggle"}
+                type="button"
+                onClick={() => setIsVideoProjectAdvancedOpen((current) => !current)}
+                aria-expanded={isVideoProjectAdvancedOpen}
+                aria-controls="video-project-builder"
+              >
+                <CaretDown size={16} weight="bold" />
+                Advanced video planning
+              </button>
+
+              {isVideoProjectAdvancedOpen ? (
+              <section id="video-project-builder" className="video-project-panel" aria-label="Video Project Builder">
                 <div className="api-settings-header">
                   <div>
                     <p className="eyebrow">Video Project Builder</p>
                     <h2>Transcript to strategy to EDL.</h2>
-                    <p className="panel-copy">Logged-in users can create a readable edit package from pasted script text before any render worker touches media. URL context needs Firecrawl, AI-assisted strategy needs OpenAI, Claude, or OpenRouter, transcription needs a speech-to-text provider, and final MP4 rendering needs an external worker/provider.</p>
+                    <p className="panel-copy">Logged-in users can create a readable planning package from pasted script text. This does not render video. Real video output needs workers, R2, Mux, and dedicated job tables first. Configure provider keys in Account.</p>
                   </div>
                   <button className="save-button is-primary-action" type="button" onClick={draftVideoProject}>
                     <VideoCamera size={17} weight="bold" />
-                    Draft Video Project
+                    Draft Video Plan
                   </button>
-                </div>
-                <div className="build-requirement-grid" aria-label="Build feature requirements">
-                  {BUILD_REQUIREMENT_GUIDE.map(([title, copy]) => (
-                    <article className="build-requirement-card" key={title}>
-                      <h3>{title}</h3>
-                      <p>{copy}</p>
-                    </article>
-                  ))}
                 </div>
                 <div className="video-project-grid">
                   <div className="field-control">
@@ -3246,7 +3612,7 @@ function App() {
                       id="build-checklist"
                       value={buildForm.renderChecklist}
                       onChange={(event) => setBuildForm((current) => ({ ...current, renderChecklist: event.target.value }))}
-                      placeholder="Track transcript, cut, subtitle, review, and export tasks."
+                      placeholder="Track transcript, cut, subtitle, review, storage, delivery, worker, and job table requirements."
                     />
                   </label>
                   <label className="field-control build-textarea-field is-wide" htmlFor="build-memory">
@@ -3255,12 +3621,13 @@ function App() {
                       id="build-memory"
                       value={buildForm.projectMemory}
                       onChange={(event) => setBuildForm((current) => ({ ...current, projectMemory: event.target.value }))}
-                      placeholder="Keep persistent decisions, source notes, approvals, render attempts, and what changed between versions."
+                      placeholder="Keep persistent decisions, source notes, approvals, setup requirements, and what changed between versions."
                     />
                   </label>
                 </div>
-                <p className="editor-note">This creates reviewable video instructions only. The browser does not transcribe source media or render final MP4 files by itself.</p>
+                <p className="editor-note">This creates reviewable planning instructions only. The browser does not transcribe source media, render final MP4 files, or upload video assets by itself.</p>
               </section>
+              ) : null}
 
               <div className="build-action-row">
                 <button className="save-button" type="button" onClick={seedBuildFromCurrentScript}>
@@ -3342,7 +3709,7 @@ function App() {
                     </article>
                   ))
                 ) : (
-                  <p className="editor-note">No Build items in this view yet. Save a script, video plan, or combined build to start.</p>
+                  <p className="editor-note">No Build items in this view yet. Save a script, video planning note, or combined build to start.</p>
                 )}
               </div>
 
@@ -3365,13 +3732,402 @@ function App() {
                 </div>
               ) : null}
             </section>
+            {pageFooter}
+          </section>
+          {tabs}
+        </>
+      ) : activeTab === "account" ? (
+        <>
+          <section className="account-view" aria-label="Account and setup">
+            <div className="editor-header">
+              <div>
+                <p className="eyebrow">Account</p>
+                <h1>Your profile and keys.</h1>
+                <p className="panel-copy">Saved scripts, Build items, custom Script Voice Profiles, and BYOK settings belong to your GitHub account.</p>
+              </div>
+              {!isAuthenticated ? (
+                <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
+                  <GithubLogo size={17} weight="bold" />
+                  Sign in
+                </button>
+              ) : null}
+            </div>
+            {isAuthenticated ? (
+              <>
+                <section className="account-profile-panel" aria-label="Profile">
+                  <div className="account-profile-card">
+                    {viewer?.image ? (
+                      <img src={viewer.image} alt="" className="account-avatar" />
+                    ) : (
+                      <span className="account-avatar is-empty" aria-hidden="true">
+                        <UserCircle size={30} weight="bold" />
+                      </span>
+                    )}
+                    <div>
+                      <strong>{viewer?.name ?? "GitHub user"}</strong>
+                      <span>{viewer?.email ?? "Email not shared by GitHub"}</span>
+                    </div>
+                  </div>
+                  <div className="account-status-grid" aria-label="Account feature status">
+                    <span>
+                      <strong>{savedScripts.length}</strong>
+                      saved scripts
+                    </span>
+                    <span>
+                      <strong>{buildItems.length}</strong>
+                      Build items
+                    </span>
+                    <span>
+                      <strong>{savedScriptVoiceProfiles.length}</strong>
+                      custom voices
+                    </span>
+                    <span>
+                      <strong>{apiKeyStatus?.keys.filter((key) => key.isConfigured).length ?? 0}</strong>
+                      BYOK keys
+                    </span>
+                  </div>
+                  <p className="modal-copy">
+                    This account owns your saved scripts, folders, Build items, custom Script Voice Profiles, and encrypted BYOK settings.
+                  </p>
+                  {accountMessage ? <p className="library-message">{accountMessage}</p> : null}
+                  {isDeleteAccountConfirmOpen ? (
+                    <div className="account-delete-confirm" role="alert" aria-label="Delete account confirmation">
+                      <p>Delete this account and its saved PromptDeck data? This removes scripts, folders, Build items, custom voices, saved keys, and profile data.</p>
+                      <div className="modal-actions">
+                        <button className="save-button" type="button" onClick={() => setIsDeleteAccountConfirmOpen(false)} disabled={isDeletingAccount}>
+                          Cancel
+                        </button>
+                        <button className="danger-button" type="button" onClick={deleteSignedInAccount} disabled={isDeletingAccount}>
+                          <Trash size={17} weight="bold" />
+                          {isDeletingAccount ? "Deleting" : "Delete account"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="modal-actions">
+                      <button className="save-button" type="button" onClick={() => void signOutFromAccount()}>
+                        <SignOut size={17} weight="bold" />
+                        Sign out
+                      </button>
+                      <button className="danger-button" type="button" onClick={() => setIsDeleteAccountConfirmOpen(true)}>
+                        <Trash size={17} weight="bold" />
+                        Delete account
+                      </button>
+                    </div>
+                  )}
+                </section>
 
+                <section className="settings-panel ai-prompt-settings-panel" aria-label="Script generator prompt settings">
+                  <div className="api-settings-header">
+                    <div>
+                      <p className="eyebrow">Script generator prompt</p>
+                      <h2>Your default AI rules.</h2>
+                      <p className="panel-copy">
+                        Edit the default rules that guide generated scripts. Script Voice Profiles and one-off style notes still layer on top.
+                      </p>
+                    </div>
+                    <div className="prompt-status-chip">
+                      {aiPromptSettings?.hasCustomPrompt ? "Custom prompt active" : "App default active"}
+                    </div>
+                  </div>
+                  <div className="ai-prompt-grid">
+                    <label className="field-control ai-prompt-editor" htmlFor="ai-default-prompt">
+                      <span>Default prompt</span>
+                      <textarea
+                        id="ai-default-prompt"
+                        value={aiPromptDraft}
+                        onChange={(event) => setAiPromptDraft(event.target.value)}
+                        placeholder={aiPromptSettings?.defaultPrompt ?? "Loading default prompt..."}
+                      />
+                    </label>
+                    <div className="ai-prompt-side">
+                      <label className="field-control" htmlFor="ai-prompt-notes">
+                        <span>Notes</span>
+                        <textarea
+                          id="ai-prompt-notes"
+                          className="modal-textarea is-compact"
+                          value={aiPromptNotes}
+                          onChange={(event) => setAiPromptNotes(event.target.value)}
+                          placeholder="Why this prompt works for you."
+                        />
+                      </label>
+                      <label className="field-control" htmlFor="skill-source-url">
+                        <span>Skill URL</span>
+                        <input
+                          id="skill-source-url"
+                          type="url"
+                          value={skillSourceUrl}
+                          onChange={(event) => setSkillSourceUrl(event.target.value)}
+                          placeholder="https://github.com/user/repo/blob/main/SKILL.md"
+                        />
+                      </label>
+                      <button className="save-button" type="button" onClick={importSkillGuidance} disabled={isImportingSkill}>
+                        <Sparkle size={17} weight="bold" />
+                        {isImportingSkill ? "Importing" : "Import Skill"}
+                      </button>
+                      <p className="editor-note">
+                        Skill URL import uses your Firecrawl key. You can also paste skill text below and save without importing.
+                      </p>
+                    </div>
+                    <label className="field-control ai-prompt-editor is-skill" htmlFor="skill-markdown">
+                      <span>Imported or pasted skill guidance</span>
+                      <textarea
+                        id="skill-markdown"
+                        value={skillMarkdownDraft}
+                        onChange={(event) => setSkillMarkdownDraft(event.target.value)}
+                        placeholder="Paste SKILL.md guidance here, or import it from a URL."
+                      />
+                    </label>
+                  </div>
+                  <div className="build-action-row">
+                    <button className="save-button is-primary-action" type="button" onClick={saveScriptGeneratorPrompt} disabled={isSavingAiPrompt}>
+                      <FloppyDisk size={17} weight="bold" />
+                      {isSavingAiPrompt ? "Saving" : "Save Prompt"}
+                    </button>
+                    <button className="save-button" type="button" onClick={copyScriptGeneratorPrompt}>
+                      <Copy size={17} weight="bold" />
+                      Copy Prompt
+                    </button>
+                    <button className="save-button" type="button" onClick={resetScriptGeneratorPrompt} disabled={isSavingAiPrompt}>
+                      <ArrowCounterClockwise size={17} weight="bold" />
+                      Reset Default
+                    </button>
+                  </div>
+                  {aiPromptMessage ? <p className="library-message">{aiPromptMessage}</p> : null}
+                </section>
+
+                <section className="settings-panel account-defaults-panel" aria-label="Default script settings">
+                  <div className="api-settings-header">
+                    <div>
+                      <p className="eyebrow">Default settings</p>
+                      <h2>Default script settings</h2>
+                      <p className="panel-copy">Save your preferred font, layout, speed, color, background, guide, and fit settings for future scripts.</p>
+                    </div>
+                    <button
+                      className="save-button has-tooltip is-primary-action"
+                      type="button"
+                      onClick={saveCurrentDefaults}
+                      disabled={isSavingDefaults}
+                      title="Save current font, color, speed, layout, background, and fit settings as defaults"
+                      data-tooltip="Save default settings"
+                    >
+                      <FloppyDisk size={17} weight="bold" />
+                      {isSavingDefaults ? "Saving" : "Save Defaults"}
+                    </button>
+                  </div>
+                  <div className="settings-controls">
+                    <div className="field-control">
+                      <span>Font</span>
+                      <CustomSelect
+                        ariaLabel="Default font"
+                        value={settings.fontFamily}
+                        options={FONT_OPTIONS}
+                        onChange={(value) => updateSetting("fontFamily", value)}
+                      />
+                    </div>
+                    <div className="field-control">
+                      <span>Layout</span>
+                      <CustomSelect
+                        ariaLabel="Default layout"
+                        value={settings.layoutMode}
+                        options={LAYOUT_OPTIONS}
+                        onChange={(value) => updateSetting("layoutMode", value)}
+                      />
+                    </div>
+                    <div className="field-control">
+                      <span>Speed multiplier</span>
+                      <CustomSelect
+                        ariaLabel="Default speed multiplier"
+                        value={String(settings.speedMultiplier)}
+                        options={SPEED_MULTIPLIER_OPTIONS}
+                        onChange={(value) => updateSetting("speedMultiplier", Number(value))}
+                      />
+                    </div>
+                    <div className="field-control">
+                      <span>Text color</span>
+                      <div className="segmented-control">
+                        {TEXT_COLORS.map((color) => (
+                          <button
+                            key={color.value}
+                            className={settings.textColor === color.value ? "segment has-tooltip is-active" : "segment has-tooltip"}
+                            type="button"
+                            title={`Set default prompter text color to ${color.label.toLowerCase()}`}
+                            data-tooltip={`Default ${color.label}`}
+                            onClick={() => updateSetting("textColor", color.value)}
+                          >
+                            {color.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  {settingsMessage ? <p className="library-message">{settingsMessage}</p> : null}
+                </section>
+
+                <div className="api-settings-panel" aria-label="Script generator settings">
+                  <div className="api-settings-header">
+                    <div>
+                      <p className="eyebrow">BYOK settings</p>
+                      <h2>Bring your own keys.</h2>
+                      <p className="panel-copy">Save provider keys for AI scripts, Firecrawl scraping, narration, and video provider setup. Raw keys are encrypted in Convex and never shown again.</p>
+                    </div>
+                  </div>
+                  <div className="byok-requirements" aria-label="Provider setup requirements">
+                    {BYOK_REQUIREMENTS.map((item) => {
+                      const saved = apiKeyStatus?.keys.find((key) => key.service === item.service);
+
+                      return (
+                        <div className={saved?.isConfigured ? "byok-requirement is-configured" : "byok-requirement"} key={item.service}>
+                          <div>
+                            <strong>{item.label}</strong>
+                            <span>{item.required}</span>
+                          </div>
+                          <p>{item.use}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="api-key-status-list" aria-label="API key status">
+                    {(apiKeyStatus?.keys ?? []).map((key) => (
+                      <span className={key.isConfigured ? "api-key-chip is-configured" : "api-key-chip"} key={key.service}>
+                        {API_KEY_SERVICE_OPTIONS.find((option) => option.value === key.service)?.label ?? key.service}
+                        {key.isConfigured ? " saved" : " missing"}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="api-key-grid">
+                    <div className="field-control">
+                      <span>Service</span>
+                      <CustomSelect
+                        ariaLabel="API key service"
+                        value={apiKeyService}
+                        options={API_KEY_SERVICE_OPTIONS}
+                        onChange={(value) => {
+                          setApiKeyService(value);
+                          const saved = apiKeyStatus?.keys.find((key) => key.service === value);
+                          setApiKeyModel(saved?.model ?? "");
+                          setApiKeySiteUrl(saved?.siteUrl ?? "");
+                          setApiKeyAppName(saved?.appName ?? "");
+                          setApiKeyMessage(null);
+                        }}
+                      />
+                    </div>
+                    <label className="field-control" htmlFor="api-key-value">
+                      <span>{API_KEY_HELP[apiKeyService].keyLabel}</span>
+                      <input
+                        id="api-key-value"
+                        type="password"
+                        value={apiKeyValue}
+                        onChange={(event) => setApiKeyValue(event.target.value)}
+                        placeholder="Paste key to save or replace"
+                      />
+                    </label>
+                    {apiKeyService === "mux" || apiKeyService === "r2" ? (
+                      <label className="field-control" htmlFor="api-key-model">
+                        <span>{API_KEY_HELP[apiKeyService].modelLabel}</span>
+                        <input
+                          id="api-key-model"
+                          type="text"
+                          value={apiKeyModel}
+                          onChange={(event) => setApiKeyModel(event.target.value)}
+                          placeholder={API_KEY_HELP[apiKeyService].modelPlaceholder}
+                        />
+                      </label>
+                    ) : MODEL_KEY_SERVICES.has(apiKeyService) ? (
+                      <div className="field-control">
+                        <span>{API_KEY_HELP[apiKeyService].modelLabel}</span>
+                        <CustomSelect
+                          ariaLabel={`${API_KEY_HELP[apiKeyService].modelLabel} model`}
+                          value={apiKeyModel}
+                          options={apiKeyModelOptions.length ? apiKeyModelOptions : [{ value: "", label: API_KEY_HELP[apiKeyService].modelPlaceholder || "Default model" }]}
+                          onChange={setApiKeyModel}
+                        />
+                        <input
+                          id="api-key-model"
+                          type="text"
+                          value={apiKeyModel}
+                          onChange={(event) => setApiKeyModel(event.target.value)}
+                          placeholder={API_KEY_HELP[apiKeyService].modelPlaceholder || "Or paste another model ID"}
+                        />
+                        <p className="field-hint">Optional. Pick a current model or paste another model ID. If blank, PromptDeck uses a safe default for that provider.</p>
+                      </div>
+                    ) : null}
+                    {SITE_APP_KEY_SERVICES.has(apiKeyService) ? (
+                      <>
+                        <label className="field-control" htmlFor="api-key-site-url">
+                          <span>{API_KEY_HELP[apiKeyService].siteLabel}</span>
+                          <input
+                            id="api-key-site-url"
+                            type="text"
+                            value={apiKeySiteUrl}
+                            onChange={(event) => setApiKeySiteUrl(event.target.value)}
+                            placeholder={apiKeyService === "mux" ? "Mux webhook signing secret" : apiKeyService === "r2" ? "Cloudflare account ID" : "https://www.promptdeck.app"}
+                          />
+                        </label>
+                        <label className="field-control" htmlFor="api-key-app-name">
+                          <span>{API_KEY_HELP[apiKeyService].appLabel}</span>
+                          <input
+                            id="api-key-app-name"
+                            type="text"
+                            value={apiKeyAppName}
+                            onChange={(event) => setApiKeyAppName(event.target.value)}
+                            placeholder={apiKeyService === "mux" ? "stream.mux.com" : apiKeyService === "r2" ? "promptdeck-video-artifacts" : "PromptDeck"}
+                          />
+                        </label>
+                      </>
+                    ) : null}
+                    <button className="save-button" type="button" onClick={saveSelectedApiKey} disabled={isSavingApiKey}>
+                      <FloppyDisk size={17} weight="bold" />
+                      {isSavingApiKey ? "Saving" : "Save Key"}
+                    </button>
+                    <button className="danger-button" type="button" onClick={removeSelectedApiKey} disabled={isRemovingApiKey}>
+                      <Trash size={17} weight="bold" />
+                      {isRemovingApiKey ? "Removing" : "Remove Key"}
+                    </button>
+                  </div>
+                  {apiKeyMessage ? <p className="library-message">{apiKeyMessage}</p> : null}
+                </div>
+              </>
+            ) : (
+              <section className="account-profile-panel" aria-label="Signed out account">
+                <p className="panel-copy">You can still paste, write, preview, and read scripts without an account. Sign in to save your library, custom voices, and BYOK provider keys.</p>
+                <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
+                  <GithubLogo size={17} weight="bold" />
+                  Sign in with GitHub
+                </button>
+              </section>
+            )}
+            {pageFooter}
+          </section>
+          {tabs}
+        </>
+      ) : (
+        <>
+          <section className="settings-view" aria-label="About and app documentation">
+            <section className="settings-panel app-docs-panel" aria-label="App documentation">
+              <div>
+                <p className="eyebrow">App docs</p>
+                <h1>How PromptDeck works.</h1>
+              </div>
+              <p className="about-copy">
+                PromptDeck has five main areas: read in Prompter, write in Script, generate in Build, review docs in About, and manage profile keys and defaults in Account.
+                Script Voice Profiles control writing tone for AI-generated scripts. Narration voice is separate and only applies to audio features.
+              </p>
+              <div className="docs-grid">
+                {APP_DOCS.map(([title, copy]) => (
+                  <article className="docs-card" key={title}>
+                    <h2>{title}</h2>
+                    <p>{copy}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
             <section className="settings-panel video-build-panel" aria-label="Video build workflow">
               <div className="api-settings-header">
                 <div>
-                  <p className="eyebrow">Video builder</p>
-                  <h2>Links, docs, scripts, and prompts to video.</h2>
-                  <p className="panel-copy">Recommended path: Firecrawl for source context, AI for script and shot structure, a transcription service for word-level timing, HyperFrames or Remotion for rendering, R2 for large artifacts, and Mux for playback.</p>
+                  <p className="eyebrow">Video setup</p>
+                  <h2>Plan links, docs, scripts, and prompts for video.</h2>
+                  <p className="panel-copy">Current video tools create planning artifacts only. Real video output requires render workers, dedicated video job tables, R2 artifact storage, and Mux delivery before any render controls should exist. Configure BYOK provider details in Account.</p>
                 </div>
                 <button
                   className="save-button has-tooltip"
@@ -3380,13 +4136,14 @@ function App() {
                     if (!requireLogin("Sign in with GitHub to use video build workflows and save video provider keys.")) {
                       return;
                     }
-                    setApiKeyMessage("Video rendering setup is documented in docs/build-video-setup.md.");
+                    setActiveTab("account");
+                    setApiKeyMessage("Video setup needs R2, Mux, provider keys, render workers, and dedicated job tables before real rendering is available.");
                   }}
-                  title="Review the video build setup"
-                  data-tooltip="Video setup"
+                  title="Open Account video setup"
+                  data-tooltip="Account setup"
                 >
                   <Article size={17} weight="bold" />
-                  Setup Guide
+                  Account Setup
                 </button>
               </div>
               <div className="docs-grid">
@@ -3410,129 +4167,33 @@ function App() {
                 ))}
               </div>
             </section>
-          </section>
-          {tabs}
-        </>
-      ) : (
-        <>
-          <section className="settings-view" aria-label="Help and settings">
-            <section className="settings-panel app-docs-panel" aria-label="App documentation">
+            <section className="settings-panel about-shortcuts-panel" aria-label="About and keyboard shortcuts">
               <div>
-                <p className="eyebrow">App docs</p>
-                <h1>How Teleprompt works.</h1>
+                <p className="eyebrow">About and shortcuts</p>
+                <h2>Shortcut-ready prompting.</h2>
               </div>
-              <p className="about-copy">
-                Teleprompt has four main areas: read in Prompter, write in Script, generate in Build, then tune defaults and learn shortcuts in Help.
-                Script Voice Profiles control writing tone for AI-generated scripts. Narration voice is separate and only applies to audio features.
-              </p>
-              <div className="docs-grid">
-                {APP_DOCS.map(([title, copy]) => (
-                  <article className="docs-card" key={title}>
-                    <h2>{title}</h2>
-                    <p>{copy}</p>
-                  </article>
+              <div className="shortcut-list" aria-label="Keyboard shortcuts">
+                {SHORTCUTS.map(([keys, action]) => (
+                  <div className="shortcut-row" key={keys}>
+                    <kbd>{keys}</kbd>
+                    <span>{action}</span>
+                  </div>
                 ))}
               </div>
             </section>
-            <div className="editor-header">
-              <div>
-                <p className="eyebrow">Help and defaults</p>
-                <h1>Shortcut-ready prompting.</h1>
-              </div>
-              <button
-                className="save-button has-tooltip is-primary-action"
-                type="button"
-                onClick={saveCurrentDefaults}
-                disabled={isSavingDefaults}
-                title="Save current font, color, speed, layout, and fit settings as defaults"
-                data-tooltip="Save default settings"
-              >
-                <FloppyDisk size={17} weight="bold" />
-                {isSavingDefaults ? "Saving" : "Save Defaults"}
-              </button>
-            </div>
-            <div className="settings-grid">
-              <section className="settings-panel" aria-label="Default script settings">
-                <h2>Default script settings</h2>
-                <div className="settings-controls">
-                  <div className="field-control">
-                    <span>Font</span>
-                    <CustomSelect
-                      ariaLabel="Default font"
-                      value={settings.fontFamily}
-                      options={FONT_OPTIONS}
-                      onChange={(value) => updateSetting("fontFamily", value)}
-                    />
-                  </div>
-                  <div className="field-control">
-                    <span>Layout</span>
-                    <CustomSelect
-                      ariaLabel="Default layout"
-                      value={settings.layoutMode}
-                      options={LAYOUT_OPTIONS}
-                      onChange={(value) => updateSetting("layoutMode", value)}
-                    />
-                  </div>
-                  <div className="field-control">
-                    <span>Speed multiplier</span>
-                    <CustomSelect
-                      ariaLabel="Default speed multiplier"
-                      value={String(settings.speedMultiplier)}
-                      options={SPEED_MULTIPLIER_OPTIONS}
-                      onChange={(value) => updateSetting("speedMultiplier", Number(value))}
-                    />
-                  </div>
-                  <div className="field-control">
-                    <span>Text color</span>
-                    <div className="segmented-control">
-                      {TEXT_COLORS.map((color) => (
-                        <button
-                          key={color.value}
-                          className={settings.textColor === color.value ? "segment has-tooltip is-active" : "segment has-tooltip"}
-                          type="button"
-                          title={`Set default prompter text color to ${color.label.toLowerCase()}`}
-                          data-tooltip={`Default ${color.label}`}
-                          onClick={() => updateSetting("textColor", color.value)}
-                        >
-                          {color.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="field-control">
-                    <span>Prompter counter</span>
-                    <button
-                      className="save-button has-tooltip"
-                      type="button"
-                      onClick={() => setIsStageMeterVisible((current) => !current)}
-                      title="Show or hide the bottom prompter counter"
-                      data-tooltip={isStageMeterVisible ? "Hide counter" : "Show counter"}
-                    >
-                      {isStageMeterVisible ? "Hide Counter" : "Show Counter"}
-                    </button>
-                  </div>
-                </div>
-                {settingsMessage ? <p className="library-message">{settingsMessage}</p> : null}
-              </section>
-              <section className="settings-panel" aria-label="Keyboard shortcuts">
-                <h2>Keyboard shortcuts</h2>
-                <div className="shortcut-list">
-                  {SHORTCUTS.map(([keys, action]) => (
-                    <div className="shortcut-row" key={keys}>
-                      <kbd>{keys}</kbd>
-                      <span>{action}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
             <section className="settings-panel about-panel" aria-label="About">
               <div>
                 <p className="eyebrow">About</p>
                 <h2>About</h2>
               </div>
               <p className="about-copy">
-                Teleprompt is an open source browser teleprompter for writing, organizing, and reading scripts with fewer distractions.
+                PromptDeck is an open source browser teleprompter for writing, organizing, generating, planning, and reading scripts with fewer distractions.
+              </p>
+              <p className="about-copy">
+                Source code:{" "}
+                <a href="https://github.com/waynesutton/teleprompter" target="_blank" rel="noreferrer">
+                  github.com/waynesutton/teleprompter
+                </a>
               </p>
               <div className="about-table-wrap">
                 <table className="about-table">
@@ -3552,7 +4213,57 @@ function App() {
                   </tbody>
                 </table>
               </div>
+              <div>
+                <p className="eyebrow">Stack</p>
+                <h2>Stack</h2>
+              </div>
+              <p className="about-copy">
+                PromptDeck is built with Codex and Convex. The app uses React, Vite, TypeScript, Phosphor Icons, Convex Auth, Convex functions,
+                Convex database tables, and Convex static hosting.
+              </p>
+              <p className="about-copy">
+                Codex setup reference:{" "}
+                <a href="https://docs.convex.dev/ai/using-codex" target="_blank" rel="noreferrer">
+                  docs.convex.dev/ai/using-codex
+                </a>
+              </p>
+              <div className="about-table-wrap">
+                <table className="about-table">
+                  <thead>
+                    <tr>
+                      <th>Layer</th>
+                      <th>What PromptDeck uses</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Frontend</td>
+                      <td>React 19, Vite 7, TypeScript, Phosphor Icons, Inter, Inter Tight, JetBrains Mono, Lexend, and OpenDyslexic.</td>
+                    </tr>
+                    <tr>
+                      <td>Backend</td>
+                      <td>Convex queries, mutations, actions, schema validation, and per-user data ownership.</td>
+                    </tr>
+                    <tr>
+                      <td>Auth</td>
+                      <td>Convex Auth with GitHub login for private scripts, Build items, defaults, BYOK settings, and custom Script Voice Profiles.</td>
+                    </tr>
+                    <tr>
+                      <td>Convex components</td>
+                      <td>
+                        Active: <code>@convex-dev/static-hosting</code>. Planned for video workflows: Convex R2 and Mux components after workers and
+                        video job tables are added.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>AI and media</td>
+                      <td>BYOK setup for OpenAI, Claude, OpenRouter, Firecrawl, ElevenLabs, Cloudflare R2, Mux, and HeyGen where configured by the user.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </section>
+            {pageFooter}
           </section>
           {tabs}
         </>
@@ -3758,6 +4469,51 @@ function App() {
           </section>
         </div>
       ) : null}
+      {legalModal ? (
+        <div
+          className="modal-scrim"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setLegalModal(null);
+            }
+          }}
+        >
+          <section
+            className="shortcut-modal legal-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="legal-modal-title"
+          >
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">PromptDeck</p>
+                <h2 id="legal-modal-title">{legalModal === "privacy" ? "Privacy Policy" : "Terms of Service"}</h2>
+              </div>
+              <button
+                className="icon-button has-tooltip"
+                type="button"
+                onClick={() => setLegalModal(null)}
+                aria-label="Close legal modal"
+                title="Close legal modal"
+                data-tooltip="Close"
+                autoFocus
+              >
+                <X size={16} weight="bold" />
+              </button>
+            </div>
+            <p className="modal-copy">Last updated: June 14, 2026. PromptDeck is made by waynesutton.ai and hosted at www.promptdeck.app.</p>
+            <div className="legal-content">
+              {(legalModal === "privacy" ? PRIVACY_SECTIONS : TERMS_SECTIONS).map(([title, copy]) => (
+                <section className="legal-section" key={title}>
+                  <h3>{title}</h3>
+                  <p>{copy}</p>
+                </section>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
       {isNewScriptDialogOpen ? (
         <div
           className="modal-scrim"
@@ -3793,7 +4549,7 @@ function App() {
               </button>
             </div>
             <p id="new-script-copy" className="modal-copy">
-              Save the current script to the shared library before starting a blank script. If this title already exists, saving updates it.
+              Save the current script to your library before starting a blank script. If this title already exists, saving updates it.
             </p>
             <div className="modal-actions">
               <button className="save-button" type="button" onClick={() => setIsNewScriptDialogOpen(false)} disabled={isSavingScript}>
@@ -3845,7 +4601,7 @@ function App() {
               </button>
             </div>
             <p id="ai-generator-copy" className="modal-copy">
-              The generated script replaces the current Script text only after the provider returns a result.
+              The generated script stays here until you copy it, save it, or send it to Script.
             </p>
             <div className="ai-modal-grid">
               <div className="field-control">
@@ -4040,6 +4796,34 @@ function App() {
                 </div>
               </section>
             </div>
+            {generatedScriptResult ? (
+              <section className="generated-script-review ai-modal-wide" aria-label="Generated script review">
+                <div className="voice-profile-header">
+                  <div>
+                    <p className="eyebrow">Generated script</p>
+                    <h3>{generatedScriptResult.model}</h3>
+                  </div>
+                  <span className="build-status-chip">
+                    {generatedScriptResult.usedUrl ? "URL context used" : "Source notes used"}
+                  </span>
+                </div>
+                <pre>{generatedScriptResult.script}</pre>
+                <div className="build-action-row">
+                  <button className="save-button is-primary-action" type="button" onClick={sendGeneratedScriptToEditor}>
+                    <PaperPlaneTilt size={17} weight="bold" />
+                    Send to Script
+                  </button>
+                  <button className="save-button" type="button" onClick={copyGeneratedScript}>
+                    <Copy size={17} weight="bold" />
+                    Copy
+                  </button>
+                  <button className="save-button" type="button" onClick={exportGeneratedMarkdown}>
+                    <DownloadSimple size={17} weight="bold" />
+                    Save Markdown
+                  </button>
+                </div>
+              </section>
+            ) : null}
             {aiMessage ? <p className="library-message modal-message">{aiMessage}</p> : null}
             <div className="modal-actions">
               <button className="save-button" type="button" onClick={() => setIsAiGeneratorOpen(false)} disabled={isGeneratingScript}>

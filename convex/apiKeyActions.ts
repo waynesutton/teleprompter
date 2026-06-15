@@ -12,6 +12,7 @@ const serviceValidator = v.union(
   v.literal("openrouter"),
   v.literal("firecrawl"),
   v.literal("elevenlabs"),
+  v.literal("r2"),
   v.literal("mux"),
   v.literal("heygen"),
 );

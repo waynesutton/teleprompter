@@ -17,7 +17,7 @@ There is no Convex action for provider-backed generation, no setup detection for
 - Add a Convex action for provider status and script generation.
 - Support OpenAI, Claude, and OpenRouter via Convex environment variables.
 - Scrape the first URL or markdown link with Firecrawl when present.
-- Add a Graphite-styled Generate Script control and advanced modal on Tab 2.
+- Add a PromptDeck-styled Generate Script control and advanced modal on Tab 2.
 - Replace the editor draft only after generation succeeds.
 - Add character, word, estimated time, and page counters below the script box.
 - Keep the existing non-AI app behavior unchanged when AI env vars are missing.

@@ -8,12 +8,15 @@
  * @module
  */
 
+import type * as aiPromptImports from "../aiPromptImports.js";
+import type * as aiPromptSettings from "../aiPromptSettings.js";
 import type * as aiScripts from "../aiScripts.js";
 import type * as apiKeyActions from "../apiKeyActions.js";
 import type * as auth from "../auth.js";
 import type * as buildItems from "../buildItems.js";
 import type * as http from "../http.js";
 import type * as legacyMigration from "../legacyMigration.js";
+import type * as promptTemplates from "../promptTemplates.js";
 import type * as scriptVoices from "../scriptVoices.js";
 import type * as staticHosting from "../staticHosting.js";
 import type * as teleprompter from "../teleprompter.js";
@@ -28,12 +31,15 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  aiPromptImports: typeof aiPromptImports;
+  aiPromptSettings: typeof aiPromptSettings;
   aiScripts: typeof aiScripts;
   apiKeyActions: typeof apiKeyActions;
   auth: typeof auth;
   buildItems: typeof buildItems;
   http: typeof http;
   legacyMigration: typeof legacyMigration;
+  promptTemplates: typeof promptTemplates;
   scriptVoices: typeof scriptVoices;
   staticHosting: typeof staticHosting;
   teleprompter: typeof teleprompter;

@@ -16,7 +16,7 @@ The app currently has no Convex function that reports voice setup status and no 
 
 - Add a Tab 1 voice icon that is always visible in the control dock.
 - Add a Convex action that checks whether `ELEVENLABS_API_KEY` is configured and returns only a boolean status, never the key.
-- Open a Graphite modal when the voice icon is clicked.
+- Open a PromptDeck modal when the voice icon is clicked.
 - If the key is missing, show: `Voice control is not set up yet. Ask the site owner to configure ELEVENLABS_API_KEY.`
 - If the key is present, show that voice control is ready but off by default until the user starts it.
 - Keep the copy direct and short.

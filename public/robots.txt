@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://befitting-dodo-95.convex.site/sitemap.xml
+Sitemap: https://www.promptdeck.app/sitemap.xml

@@ -18,7 +18,7 @@ Saved script documents only store title, script text, and timestamps. The editor
 - Add a Folder input beside Script title in Tab 2.
 - Add a Saved folder filter above the saved script selector.
 - Keep existing scripts valid by treating missing folders as "No folder."
-- Keep the UI aligned with the current Graphite styling.
+- Keep the UI aligned with the current PromptDeck styling.
 
 ## Files To Change
 

@@ -1,5 +1,5 @@
 Created: 2026-05-31 22:03 UTC
-Last Updated: 2026-05-31 22:15 UTC
+Last Updated: 2026-06-14 01:55 UTC
 Status: Done
 
 # Convex Auth GitHub Setup
@@ -59,17 +59,18 @@ The app started with shared Convex records and deployment-level API keys. That m
 
 6. Create a GitHub OAuth app:
 
-   - Homepage URL: `https://befitting-dodo-95.convex.site`
-   - Authorization callback URL: `https://befitting-dodo-95.convex.site/api/auth/callback/github`
+   - Homepage URL: `https://www.promptdeck.app`
+   - Authorization callback URL: `https://www.promptdeck.app/api/auth/callback/github`
    - Local callback during dev: use the Convex dev site URL shown by `npx convex dev`, with `/api/auth/callback/github`.
 
 7. Set Convex environment variables:
 
    ```bash
-   npx convex env set AUTH_GITHUB_ID "..."
-   npx convex env set AUTH_GITHUB_SECRET "..."
-   npx convex env set SITE_URL "https://befitting-dodo-95.convex.site"
-   npx convex env set USER_KEYS_SECRET "generate-a-long-random-secret"
+   npx convex env set --prod AUTH_GITHUB_ID "..."
+   npx convex env set --prod AUTH_GITHUB_SECRET "..."
+   npx convex env set --prod SITE_URL "https://www.promptdeck.app"
+   npx convex env set --prod CUSTOM_AUTH_SITE_URL "https://www.promptdeck.app"
+   npx convex env set --prod USER_KEYS_SECRET "generate-a-long-random-secret"
    ```
 
 8. Generate and set Convex Auth JWT/JWKS secrets using the current Convex Auth setup flow:
@@ -78,13 +79,22 @@ The app started with shared Convex records and deployment-level API keys. That m
    npx @convex-dev/auth
    ```
 
-   Keep the generated `JWT_PRIVATE_KEY` and `JWKS` values in Convex environment variables.
+   Keep the generated `JWT_PRIVATE_KEY` and `JWKS` values in Convex environment variables:
+
+   ```bash
+   npx convex env set --prod JWT_PRIVATE_KEY "paste-generated-private-key"
+   npx convex env set --prod JWKS "paste-generated-jwks-json"
+   ```
+
+   If production login fails with `Missing environment variable JWT_PRIVATE_KEY`, this step has not been completed on the production Convex deployment.
+
+   Do not set `CONVEX_SITE_URL`; Convex provides it as a built-in deployment variable. Use `CUSTOM_AUTH_SITE_URL` when the OAuth callback should use the custom domain.
 
 9. Optional legacy data claim:
 
    ```bash
-   npx convex env set LEGACY_OWNER_EMAIL "your-github-email@example.com"
-   npx convex env set LEGACY_OWNER_GITHUB_LOGIN "your-github-name"
+   npx convex env set --prod LEGACY_OWNER_EMAIL "your-github-email@example.com"
+   npx convex env set --prod LEGACY_OWNER_GITHUB_LOGIN "your-github-name"
    ```
 
    After signing in as that account, run `legacyMigration.claimLegacySharedData` once from the Convex dashboard to attach old shared records to that user.
@@ -110,7 +120,7 @@ The app started with shared Convex records and deployment-level API keys. That m
 ## Edge Cases
 
 - Logged-out users can still paste/type scripts and use Tab 1.
-- Logged-out users see Graphite login modals for saved library, AI, Firecrawl, voice, defaults, and custom voices.
+- Logged-out users see PromptDeck login modals for saved library, AI, Firecrawl, voice, defaults, and custom voices.
 - Provider keys are write-only from the browser's perspective.
 - Existing unowned data is hidden until claimed by the configured legacy owner.
 - Firecrawl URL generation requires both a configured AI provider key and Firecrawl key.
@@ -132,3 +142,4 @@ The app started with shared Convex records and deployment-level API keys. That m
 - 2026-05-31 22:03 UTC - Added Convex Auth GitHub provider wiring, auth HTTP routes, auth tables, per-user saved data, login UI, login-required modals, encrypted BYOK API key storage, per-user AI/Firecrawl/ElevenLabs status, and legacy shared data claim mutation.
 - 2026-05-31 22:03 UTC - Verified with `npx convex dev --once`, `npm run typecheck`, `npm run lint`, and `npm run build`.
 - 2026-05-31 22:15 UTC - Uploaded the latest verified build to Convex static hosting with `npm run deploy:static:dev`.
+- 2026-06-14 01:55 UTC - Updated production OAuth and Convex Auth environment setup for `https://www.promptdeck.app/`, including explicit production `JWT_PRIVATE_KEY`, `JWKS`, and `CUSTOM_AUTH_SITE_URL` guidance.

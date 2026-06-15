@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added an explicit `deploy:static:prod` script for production Convex static hosting uploads.
 - Added a `deploy:backend:prod` script and made `deploy` run backend production deploy before static upload.
 - Added a `convex-static-hosting-deploy` skill with `/deploydev` and `/deployprod` workflows for this app.
+- Added an About Stack section naming React, Vite, TypeScript, Codex, Convex, Convex Auth, active Convex static hosting, and planned R2/Mux component usage.
 - Created a black and white Vite React teleprompter app with Convex-backed script and settings state.
 - Added a two-tab workflow for prompting and script editing.
 - Added prompter controls for playback, scroll position, font size, speed, mirrored text, and reading guide.
@@ -30,7 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added an npm override for `ws` to keep production dependency audit clean.
 - Added a Tab 1 shortcut help button and modal with `Command + ?` / `Control + ?` open support and `Esc` close support.
 - Added a guarded New Script flow on Tab 2 with save-first, discard, and cancel choices.
-- Added Graphite as a bundled prompter font option.
+- Added PromptDeck as a bundled prompter font option.
 - Added an optional Tab 2 AI script generator for OpenAI, Claude, OpenRouter, and Firecrawl-backed URL context.
 - Added script character, word, read-time, and page counters below the script editor.
 - Added custom folder support for saved scripts on Tab 2.
@@ -61,6 +62,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added Build tab controls for editing, archiving, restoring, deleting, seeding from the current script, and sending saved Build scripts back to the Script tab.
 - Added a Video Project Builder in Build with transcript reading view, edit strategy, EDL JSON, subtitle style, render checklist, output format, and project memory fields.
 - Added a local Draft Video Project action that converts the current script or Build form into a reviewable video planning package without requiring AI.
+- Added a `promptdeck.app` custom domain setup PRD covering Convex production custom domains, Cloudflare DNS, Auth callback updates, metadata cutover, verification, and rollback.
+- Added a signed-in account/profile modal with GitHub profile details, feature counts, sign out, and delete-account confirmation.
+- Added a protected account deletion mutation that removes user-owned scripts, settings, Build items, custom voices, BYOK keys, auth sessions, auth accounts, refresh tokens, and the user profile.
+- Added a visible Build BYOK setup checklist so logged-out users can see which provider keys are needed before signing in.
+- Added a dedicated Account page for profile status, sign out, delete account, and BYOK provider setup.
+- Added a source-first Creator Console layout to Build and a collapsed advanced Video Project Builder toggle.
+- Added a short PromptDeck default script for new/local sessions.
+- Added app footers on Script, Build, Help, and Account with open source, Convex, Terms, and Privacy links.
+- Added PromptDeck-styled Terms of Service and Privacy Policy modals adapted for PromptDeck.
+- Added curated BYOK model selectors for OpenAI, Claude, and OpenRouter with custom model entry support.
+- Added Tab 1 prompter background options for solid black, spotlight, and white with black text.
+- Added PromptDeck-branded style tokens and the `#33E7A2` accent color across controls, focus states, metadata, and SVG social assets.
+- Added PNG versions of the PromptDeck favicon and social card assets.
+- Added AI prompt architecture documentation for script generation, RSVP rewrite, Script Voice Profiles, Firecrawl context, and provider calls.
+- Added synced `.agents` project skills, including development, workflow, design, Convex, deployment, docs sync, and supporting agent/editor skills.
+- Added Cloudflare R2 as a visible BYOK setup/status option for future video artifact storage, without adding render behavior (2026-06-15).
+- Added per-user Account prompt settings so logged-in users can view, edit, copy, reset, and save the default AI script generator rules.
+- Added Firecrawl-backed skill URL import for logged-in users so generated scripts can follow pasted or imported `SKILL.md` guidance.
+- Added generated-script review actions for Copy, Save Markdown, and Send to Script before replacing the editor draft.
 
 ### Changed
 
@@ -74,11 +94,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added a Tab 1 center-text control beside Fit.
 - Reworked the Tab 1 control bar into grouped transport, scroll, view, typography, speed, and display clusters so labels and controls no longer collide.
 - Shrunk the Tab 1 dock and bottom tab bar, made Start/Pause icon-only, and tuned desktop controls to fit on one row.
-- Restyled app controls, tabs, panels, fields, and modals with the Graphite UI palette and typography while preserving the main prompter reading surface.
+- Restyled app controls, tabs, panels, fields, and modals with the PromptDeck UI palette and typography while preserving the main prompter reading surface.
 - Kept AI generation non-blocking for unconfigured installs by showing a setup warning modal instead of changing the editor flow.
 - Made saved script title matching folder-aware so the same title can exist in different folders.
 - Put Tab 2 Whole text and Selection formatting controls into one compact row when space allows.
-- Replaced native browser dropdowns with Graphite styled selectors across prompter, script library, settings, and AI generation controls.
+- Replaced native browser dropdowns with PromptDeck styled selectors across prompter, script library, settings, and AI generation controls.
 - Updated all keyboard shortcut helper locations with tab switching and script undo shortcuts.
 - Kept voice control off by default, even when ElevenLabs is configured.
 - Made the Tab 1 speed multiplier menu open upward so it stays visible near the bottom edge.
@@ -108,6 +128,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Updated README and Build video setup docs to describe the transcript-first video project workflow.
 - Made Draft Video Project a logged-in-only action and clarified that saving scripts, videos, and Build items requires GitHub login.
 - Updated Build, Help, About, README, and setup guide copy to explain which video workflow features need Firecrawl, AI provider keys, transcription services, and external render workers.
+- Updated PromptDeck metadata, sitemap, robots policy, Auth setup docs, and custom domain docs to use `https://www.promptdeck.app/`.
+- Clarified Convex Auth production setup for `JWT_PRIVATE_KEY` and `JWKS` after GitHub OAuth callback failures.
+- Updated Convex Auth custom-domain setup to use `CUSTOM_AUTH_SITE_URL` instead of trying to override built-in `CONVEX_SITE_URL`.
+- Moved BYOK provider settings from Build to Account and moved video workflow documentation from Build to Help.
+- Changed the logged-in bottom rail account control to a compact profile icon.
+- Changed Script library controls so save, load, delete, and folder management are visible only after GitHub login.
+- Changed OpenAI, Claude, and OpenRouter generation so saved provider keys can use safe default models when no model is provided.
+- Updated Script library copy from shared/everyone language to private per-user library language.
+- Linked the footer `waynesutton.ai` credit to `https://waynesutton.ai`.
+- Changed the default prompter background from the grey spotlight to solid black.
+- Renamed the bundled app font option and UI style references from the old style-system name to PromptDeck.
+- Updated Help/About copy with current features and a direct GitHub repository link.
+- Moved signed-in default script settings from About/Help to Account, moved the prompter counter toggle into the Tab 1 gear menu, and renamed the bottom rail Help label to About.
+- Polished the About tab shortcuts section into a full-width boxed panel with consistent section spacing.
+- Updated README workflow copy so About owns docs/shortcuts and Account owns default settings and BYOK setup.
+- Refocused Build around script generation first, split video planning setup into its own section, and clarified video features are planning-only until workers, R2, Mux, and job tables exist (2026-06-15).
+- Changed AI script generation to use the logged-in user's saved prompt and imported skill guidance when present.
+- Updated About copy to mention skill-supported script generation.
 
 ### Removed
 

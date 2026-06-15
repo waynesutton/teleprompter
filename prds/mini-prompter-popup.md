@@ -15,7 +15,7 @@ The app currently has one full-screen browser prompter view. Keyboard shortcuts 
 ## Proposed Solution
 
 - Add a Phosphor `MonitorArrowUp` control to Tab 1.
-- Open a compact popup window with a dark Graphite-styled mini prompter surface.
+- Open a compact popup window with a dark PromptDeck-styled mini prompter surface.
 - Keep the popup synced with the active script page, scroll/RSVP mode, playback state, current RSVP word, progress, font, color, and page metadata.
 - Forward popup keyboard events to the main app so existing shortcuts keep working.
 - Add a shortcut for opening/focusing the mini view.

@@ -16,7 +16,7 @@ The Tab 1 control bar is too long after adding RSVP, voice, and AI controls. The
 
 ## Proposed Solution
 
-- Add a Phosphor Gear control to Tab 1 that opens a Graphite-styled options menu.
+- Add a Phosphor Gear control to Tab 1 that opens a PromptDeck-styled options menu.
 - Move Fit, Center, Mirror, Guide, Shortcuts, and AI RSVP rewrite into the Gear menu.
 - Keep primary controls visible: transport, scroll/RSVP position, reading mode, size, speed/WPM, speed multiplier, and voice.
 - Raise the SquareHalfBottom dock toggle above the bottom tabs while the dock is visible, and keep it in the corner when the dock is hidden.

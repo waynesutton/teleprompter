@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
-  <title id="title">Teleprompt favicon</title>
-  <desc id="desc">A black rounded square with a lime teleprompter cue line.</desc>
+  <title id="title">PromptDeck favicon</title>
+  <desc id="desc">A black rounded square with a PromptDeck teal teleprompter cue line.</desc>
   <rect width="64" height="64" rx="16" fill="#090a0c"/>
   <rect x="8" y="8" width="48" height="48" rx="12" fill="#15181d" stroke="#313741" stroke-width="2"/>
-  <path d="M18 20h28M18 31h22M18 42h28" stroke="#b7ff39" stroke-width="5" stroke-linecap="round"/>
+  <path d="M18 20h28M18 31h22M18 42h28" stroke="#33E7A2" stroke-width="5" stroke-linecap="round"/>
   <circle cx="48" cy="31" r="4" fill="#ffffff"/>
 </svg>

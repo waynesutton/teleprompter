@@ -7,18 +7,31 @@ const DEFAULT_SETTINGS_KEY = "shared-defaults";
 const SAVED_SCRIPT_LIMIT = 50;
 
 const colorValidator = v.union(v.literal("white"), v.literal("red"), v.literal("yellow"), v.literal("grey"), v.literal("darkgrey"));
-const fontFamilyValidator = v.union(v.literal("system"), v.literal("graphite"), v.literal("lexend"), v.literal("opendyslexic"));
+const fontFamilyValidator = v.union(v.literal("system"), v.literal("promptdeck"), v.literal("lexend"), v.literal("opendyslexic"));
 const layoutModeValidator = v.union(v.literal("left"), v.literal("centered"));
+const backgroundModeValidator = v.union(v.literal("black"), v.literal("spotlight"), v.literal("white"));
+const PROMPT_FONTS = ["system", "promptdeck", "lexend", "opendyslexic"] as const;
+type PromptFont = (typeof PROMPT_FONTS)[number];
 
 const DEFAULT_PROMPT = {
-  script: `Hello everyone, and welcome to our channel!
+  script: `Welcome to PromptDeck.
 
-[short pause]
+PromptDeck helps you write, organize, and read scripts in the browser.
 
-Today, we have an exciting announcement to share with you.
-Start with your strongest line, keep your eyes near the lens, and let the words move at your pace.
+Start in Script when you need to draft.
+Move to Build when you want help turning notes, links, or ideas into a stronger script.
+Open Prompter when you are ready to read.
 
-Thank you for watching.`,
+[pause]
+
+Use page breaks when you want a cleaner pace.
+Use RSVP when you want one word at a time.
+Use Mini View when you need a compact recording window.
+
+The goal is simple:
+less setup, fewer distractions, better delivery.
+
+Let's record.`,
   fontSize: 56,
   speed: 36,
   speedMultiplier: 1,
@@ -29,6 +42,7 @@ Thank you for watching.`,
   textColor: "white" as const,
   fontFamily: "system" as const,
   layoutMode: "left" as const,
+  backgroundMode: "black" as const,
 };
 
 const DEFAULT_SCRIPT_SETTINGS = {
@@ -38,6 +52,7 @@ const DEFAULT_SCRIPT_SETTINGS = {
   textColor: DEFAULT_PROMPT.textColor,
   fontFamily: DEFAULT_PROMPT.fontFamily,
   layoutMode: DEFAULT_PROMPT.layoutMode,
+  backgroundMode: DEFAULT_PROMPT.backgroundMode,
   guide: DEFAULT_PROMPT.guide,
   fitToWindow: DEFAULT_PROMPT.fitToWindow,
 };
@@ -49,6 +64,14 @@ const getCanonicalTitle = (title: string) => normalizeTitle(title).toLowerCase()
 const normalizeFolder = (folder: string) => folder.trim().replace(/\s+/g, " ");
 
 const getCanonicalFolder = (folder: string) => normalizeFolder(folder).toLowerCase();
+
+const normalizePromptFont = (fontFamily: string | undefined): PromptFont => {
+  if (PROMPT_FONTS.some((font) => font === fontFamily)) {
+    return fontFamily as PromptFont;
+  }
+
+  return DEFAULT_PROMPT.fontFamily;
+};
 
 export const getCurrent = query({
   args: {},
@@ -73,8 +96,9 @@ export const getCurrent = query({
       speedMultiplier: prompt.speedMultiplier ?? DEFAULT_PROMPT.speedMultiplier,
       fitToWindow: prompt.fitToWindow ?? DEFAULT_PROMPT.fitToWindow,
       textColor: prompt.textColor ?? DEFAULT_PROMPT.textColor,
-      fontFamily: prompt.fontFamily ?? DEFAULT_PROMPT.fontFamily,
+      fontFamily: normalizePromptFont(prompt.fontFamily),
       layoutMode: prompt.layoutMode ?? DEFAULT_PROMPT.layoutMode,
+      backgroundMode: prompt.backgroundMode ?? DEFAULT_PROMPT.backgroundMode,
     };
   },
 });
@@ -97,7 +121,11 @@ export const getDefaultSettings = query({
       return { ...DEFAULT_SCRIPT_SETTINGS, key: DEFAULT_SETTINGS_KEY, updatedAt: 0 };
     }
 
-    return settings;
+    return {
+      ...settings,
+      fontFamily: normalizePromptFont(settings.fontFamily),
+      backgroundMode: settings.backgroundMode ?? DEFAULT_SCRIPT_SETTINGS.backgroundMode,
+    };
   },
 });
 
@@ -131,6 +159,7 @@ export const save = mutation({
     textColor: colorValidator,
     fontFamily: fontFamilyValidator,
     layoutMode: layoutModeValidator,
+    backgroundMode: backgroundModeValidator,
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
@@ -157,7 +186,8 @@ export const save = mutation({
       (prompt.fitToWindow ?? DEFAULT_PROMPT.fitToWindow) === args.fitToWindow &&
       (prompt.textColor ?? DEFAULT_PROMPT.textColor) === args.textColor &&
       (prompt.fontFamily ?? DEFAULT_PROMPT.fontFamily) === args.fontFamily &&
-      (prompt.layoutMode ?? DEFAULT_PROMPT.layoutMode) === args.layoutMode
+      (prompt.layoutMode ?? DEFAULT_PROMPT.layoutMode) === args.layoutMode &&
+      (prompt.backgroundMode ?? DEFAULT_PROMPT.backgroundMode) === args.backgroundMode
     ) {
       return prompt._id;
     }
@@ -183,6 +213,7 @@ export const saveDefaultSettings = mutation({
     textColor: colorValidator,
     fontFamily: fontFamilyValidator,
     layoutMode: layoutModeValidator,
+    backgroundMode: backgroundModeValidator,
     guide: v.boolean(),
     fitToWindow: v.boolean(),
     updatedAt: v.number(),
@@ -207,6 +238,7 @@ export const saveDefaultSettings = mutation({
       existing.textColor === args.textColor &&
       existing.fontFamily === args.fontFamily &&
       existing.layoutMode === args.layoutMode &&
+      (existing.backgroundMode ?? DEFAULT_PROMPT.backgroundMode) === args.backgroundMode &&
       existing.guide === args.guide &&
       existing.fitToWindow === args.fitToWindow
     ) {

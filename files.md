@@ -1,30 +1,40 @@
 # Files
 
-- `package.json` - Project scripts and dependencies for the Vite, React, TypeScript, Convex, Convex Auth, production backend deploys, production and dev static hosting uploads, Phosphor Icons, Graphite fonts, and accessible font app.
+- `package.json` - Project scripts and dependencies for the Vite, React, TypeScript, Convex, Convex Auth, production backend deploys, production and dev static hosting uploads, Phosphor Icons, PromptDeck fonts, and accessible font app.
 - `package-lock.json` - npm dependency lockfile.
+- `README.md` - Project overview, feature list, workflow, stack, Convex component notes, local setup, Auth/BYOK setup, per-user library notes, static hosting deploy commands, and optional video workflow setup summary.
 - `.env.example` - Example environment file showing the required Convex URL variable.
 - `.codex/skills/convex-static-hosting-deploy/SKILL.md` - Project skill for `/deploydev`, `/deployprod`, and Convex static-hosting deployment workflows.
+- `.agents/skills/` - Cross-agent project skills for development, workflow, deploys, design, Convex, docs sync, and supporting editor/agent environments.
+- `.agents/skills/update-project-docs/SKILL.md` - Project docs sync skill activated by `/update`, `@update`, or `update project docs`.
+- `.claude/skills/` - Claude skill pointer files for Convex-related project skills.
 - `index.html` - Vite HTML entry file with SEO, AEO, GEO, Open Graph, Twitter card, favicon, canonical, sitemap, and JSON-LD metadata.
-- `public/favicon.svg` - Custom SVG favicon for Teleprompt.
+- `public/favicon.svg` - Custom SVG favicon for PromptDeck.
+- `public/favicon.png` - PNG favicon generated from the PromptDeck SVG favicon.
 - `public/social-card.svg` - Large 1200x630 SVG share image for Open Graph and Twitter cards.
+- `public/social-card.png` - PNG social card generated from the PromptDeck SVG share image.
 - `public/robots.txt` - Search crawler policy that allows indexing and points to the sitemap.
 - `public/sitemap.xml` - Sitemap for the hosted app root.
 - `vite.config.ts` - Vite React configuration.
 - `eslint.config.js` - ESLint configuration for TypeScript and React hooks.
 - `tsconfig.json` - TypeScript configuration for app and Convex code.
 - `src/main.tsx` - React entry point, Convex Auth provider setup, and bundled Inter, Inter Tight, JetBrains Mono, Lexend, and OpenDyslexic font imports.
-- `src/App.tsx` - Four-tab teleprompter experience with Prompter, Script, Build, Help, bottom-tab GitHub auth UI, per-user saved library gates, encrypted BYOK settings, Phosphor icons, prompting, draggable/resizable synced Mini View modal beside the hide-bar control, optional RSVP/ORP reading mode, keyboard tab switching, Tab 1 Layout hide/show control, countdown counter shortcut, fit-to-window measurement, Gear menu secondary options, app-driven script undo, script editing and preview, Graphite styled selectors, Build tab AI script generation, logged-in Video Project Builder with requirement cards, Build item save/edit/archive/delete workspace, built-in and custom Script Voice Profiles, video workflow planning, RSVP rewrite controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, user script save/load/delete, default settings, counter visibility, keyboard shortcuts, shortcut help modal, Help app docs and About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
-- `src/styles.css` - Graphite-inspired responsive interface styles, including bottom-tab auth control, BYOK settings, Build video workflow, Video Project Builder, Build requirement cards, Build item library panels, readiness chips, shared control tokens, true teleprompter end-scroll padding, RSVP word and pivot rendering, custom selectors with upward placement support, compact one-row desktop prompter dock spacing, Tab 1 Gear menu, Tab 1 Layout and mini-view side controls, draggable/resizable true Mini View modal, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator and Script Voice Profile controls, shortcut modal, login modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, app docs cards, shortcut, About table, and wrapping shared library controls.
+- `src/App.tsx` - Five-tab teleprompter experience with Prompter, Script, Build, About, Account, compact bottom-tab GitHub auth/profile UI, dedicated account/profile page with sign out, delete account, default script settings, encrypted BYOK settings including Cloudflare R2 setup status, per-user AI script generator prompt settings, Firecrawl skill URL import, visible BYOK requirements, curated provider model selectors, generated script review actions for Copy/Markdown/Send to Script, per-user Script library gates, PromptDeck default script, footer/legal modal links including the `waynesutton.ai` credit link, Phosphor icons, prompting, draggable/resizable synced Mini View modal beside the hide-bar control, optional RSVP/ORP reading mode, keyboard tab switching, Tab 1 Layout hide/show control, countdown counter shortcut, fit-to-window measurement, Gear menu secondary options with prompter background modes and counter visibility, app-driven script undo, script editing and preview, PromptDeck styled selectors, script-first Build creator, Build tab AI script generation, separate video planning setup panel, collapsed advanced Video Project Builder planning controls, Build item save/edit/archive/delete workspace, About video workflow docs, boxed full-width About shortcuts panel, About Stack table with Codex, Convex, Convex Auth, active static hosting, and planned R2/Mux notes, built-in and custom Script Voice Profiles, video workflow planning, RSVP rewrite controls, ElevenLabs voice setup gate, saved script folders, guarded New Script flow, formatting, paging, markdown export, user script save/load/delete, keyboard shortcuts, shortcut help modal, About app docs and About section, compact grouped playback/scroll/view/type/speed/display controls, mirror, guide, and tooltips.
+- `src/styles.css` - PromptDeck responsive interface styles and tokens, including the `#33E7A2` accent, solid black, spotlight, and white prompter background modes, bottom-tab auth/profile control, Account page, BYOK settings and requirements, per-user AI prompt editor, skill guidance editor, generated-script review panel, curated model selector fields, source-first Build Creator Console, collapsed advanced Video Project Builder controls, Build video workflow docs, Build requirement cards, Build item library panels, readiness chips, footer/legal modals, logged-out library notice, shared control tokens, true teleprompter end-scroll padding, RSVP word and pivot rendering, custom selectors with upward placement support, compact one-row desktop prompter dock spacing, Tab 1 Gear menu, Tab 1 Layout and mini-view side controls, draggable/resizable true Mini View modal, smaller bottom tabs, hover, active, focus, selected, disabled, tooltip, AI generator and Script Voice Profile controls, shortcut modal, login modal, new script confirmation modal, delete confirmation, editor toolbar, script preview, settings, app docs cards, boxed About shortcut spacing, About table, and wrapping private library controls.
 - `src/vite-env.d.ts` - Vite environment type references.
 - `convex/auth.ts` - Convex Auth GitHub provider configuration and exported auth functions.
-- `convex/schema.ts` - Convex schema for auth tables, per-user prompt state, per-user default settings, Graphite font and dark grey color selection, folder-aware saved scripts, Build items with video project planning artifacts, custom Script Voice Profiles, and encrypted user API key records including Mux and HeyGen.
-- `convex/teleprompter.ts` - Convex queries and mutations for authenticated current prompt state, per-user default settings, Graphite font and dark grey color validation, and folder-aware saved script save/delete.
+- `convex/auth.config.ts` - Convex Auth JWT provider configuration generated by the Convex Auth production initializer.
+- `convex/schema.ts` - Convex schema for auth tables, per-user prompt state, per-user default settings, prompter background mode, PromptDeck font and dark grey color selection, folder-aware saved scripts, Build items with video project planning artifacts, custom Script Voice Profiles, per-user AI prompt settings, and encrypted user API key records including Cloudflare R2, Mux, and HeyGen.
+- `convex/teleprompter.ts` - Convex queries and mutations for authenticated current prompt state with the PromptDeck default script, per-user default settings, prompter background mode fallback, PromptDeck font and dark grey color validation, and folder-aware saved script save/delete.
 - `convex/buildItems.ts` - Convex queries and mutations for authenticated Build item listing, saving, editing, archiving, restoring, deleting, and storing video project planning artifacts.
-- `convex/aiScripts.ts` - Convex actions for authenticated BYOK provider status, Script Voice Profile-aware script generation with OpenAI, Claude, OpenRouter, Firecrawl URL scraping, and optional RSVP script rewriting.
+- `convex/aiScripts.ts` - Convex actions for authenticated BYOK provider status, default provider model fallback, per-user prompt-aware and Script Voice Profile-aware script generation with OpenAI, Claude, OpenRouter, Firecrawl URL scraping, and optional RSVP script rewriting.
+- `convex/aiPromptSettings.ts` - Convex queries and mutations for authenticated per-user script generator prompt settings, default prompt reset, and imported skill guidance storage.
+- `convex/aiPromptImports.ts` - Node Convex action that imports skill guidance from a URL with the user's Firecrawl key and saves the readable markdown as AI prompt context.
+- `convex/promptTemplates.ts` - Shared default AI script generator prompt and prompt-building helpers used by account settings and script generation.
 - `convex/scriptVoices.ts` - Convex queries and mutations for listing, saving, updating, and deleting authenticated custom Script Voice Profiles.
-- `convex/userApiKeys.ts` - Convex queries and mutations for per-user encrypted AI, scraping, voice, Mux, and HeyGen API key status, storage, and removal.
-- `convex/apiKeyActions.ts` - Node Convex action that encrypts AI, scraping, voice, Mux, and HeyGen user API keys before storing them.
-- `convex/users.ts` - Convex query for the currently signed-in GitHub user profile.
+- `convex/userApiKeys.ts` - Convex queries and mutations for per-user encrypted AI, scraping, voice, Cloudflare R2, Mux, and HeyGen API key status, storage, and removal.
+- `convex/apiKeyActions.ts` - Node Convex action that encrypts AI, scraping, voice, Cloudflare R2, Mux, and HeyGen user API keys before storing them.
+- `convex/users.ts` - Convex query for the currently signed-in GitHub user profile and protected account deletion mutation for user-owned app/auth data.
 - `convex/legacyMigration.ts` - One-time authenticated mutation for claiming legacy shared records for the configured owner.
 - `convex/voice.ts` - Convex action for checking authenticated ElevenLabs BYOK setup without exposing the key.
 - `convex/convex.config.ts` - Convex component registration, including static hosting.
@@ -32,7 +42,7 @@
 - `convex/http.ts` - HTTP routes for Convex Auth plus static hosting routes that serve the built app from Convex storage.
 - `convex/_generated/` - Convex generated client and server types.
 - `convex/tsconfig.json` - Convex TypeScript configuration generated by Convex.
-- `docs/build-video-setup.md` - Setup guide for Build tab video generation architecture, login requirements, provider requirements, the Video Project Builder, Firecrawl, AI, HyperFrames, Remotion, R2, Mux, and Convex job tracking.
+- `docs/build-video-setup.md` - Setup guide for script-first Build video planning architecture, login requirements, provider requirements, the Video Project Builder, Firecrawl, AI, HyperFrames, Remotion, R2, Mux, and the worker/job-table prerequisites for real rendering.
 - `prds/teleprompter-app.md` - Product requirements for the local teleprompter build.
 - `prds/shared-script-library.md` - Product requirements for shared script save/load.
 - `prds/app-interaction-polish.md` - Product requirements for app-wide UI interaction polish.
@@ -41,8 +51,12 @@
 - `prds/prompter-control-bar-polish.md` - Product requirements for the grouped, polished Tab 1 prompter control bar.
 - `prds/one-row-phosphor-control-dock.md` - Product requirements for the one-row compact Phosphor control dock.
 - `prds/shortcut-help-modal.md` - Product requirements for the Tab 1 shortcut help button and modal.
-- `prds/graphite-new-script-flow.md` - Product requirements for the guarded New Script flow and Graphite UI update.
+- `prds/promptdeck-new-script-flow.md` - Product requirements for the guarded New Script flow and PromptDeck UI update.
+- `prds/promptdeck-ui.md` - PromptDeck UI reference used for the app control, panel, and typography style direction.
+- `prds/promptdeck-accent-and-brand-cleanup.md` - Product requirements and completion log for the PromptDeck accent, token naming, font option, Help/About, and docs cleanup.
 - `prds/ai-script-generator.md` - Product requirements for the optional AI script generator.
+- `prds/ai-prompt-architecture.md` - Product requirements and source map for AI script generation prompts, RSVP rewrite prompts, Script Voice Profiles, Firecrawl context, and provider calls.
+- `prds/user-ai-prompt-settings.md` - Product requirements and completion log for per-user AI prompt settings, Firecrawl skill URL import, and generated-script review actions.
 - `prds/saved-script-folders.md` - Product requirements for saved script folder support.
 - `prds/tab-two-preview-and-select-polish.md` - Product requirements for Tab 2 preview, one-row formatting controls, dark grey color support, and custom selectors.
 - `prds/keyboard-tab-switching-and-script-undo.md` - Product requirements for tab switching shortcuts and app-driven Tab 2 script undo.
@@ -56,7 +70,7 @@
 - `prds/true-teleprompter-end-scroll.md` - Product requirements for true Tab 1 end-scroll behavior.
 - `prds/script-voice-profiles.md` - Product requirements for built-in and Convex-backed custom Script Voice Profiles.
 - `prds/app-metadata-and-readme-refresh.md` - Product requirements for public app metadata, social assets, and README refresh.
-- `prds/authsetup.prd.md` - Product requirements and setup steps for Convex Auth GitHub login, per-user data, and BYOK provider settings.
+- `prds/authsetup.prd.md` - Product requirements and setup steps for Convex Auth GitHub login, per-user data, BYOK provider settings, production `JWT_PRIVATE_KEY`/`JWKS`, and `https://www.promptdeck.app/` callback setup.
 - `prds/static-hosting-deploy-skill.md` - Product requirements for the project-specific Convex static-hosting deploy skill.
 - `prds/mini-prompter-popup.md` - Product requirements for the synced Tab 1 mini prompter popup and shared keyboard shortcut support.
 - `prds/mini-prompter-chrome-polish.md` - Product requirements for the mini popup chrome sizing and launcher placement update.
@@ -67,6 +81,15 @@
 - `prds/build-library-management.md` - Product requirements for the Build item save, edit, archive, restore, and delete workspace.
 - `prds/video-project-builder.md` - Product requirements for the Build tab Video Project Builder and transcript-first planning artifacts.
 - `prds/build-login-requirements-copy.md` - Product requirements for Build login gating and API/service requirement copy.
+- `prds/promptdeck-domain-setup.md` - Product requirements and runbook for connecting `promptdeck.app` to the production Convex static-hosting deployment through Cloudflare DNS.
+- `prds/auth-account-byok-production-fix.md` - Product requirements and completion log for the production Convex Auth env fix, account modal, delete-account flow, BYOK requirements, and PromptDeck canonical URL updates.
+- `prds/build-account-layout-refactor.md` - Product requirements and completion log for the Build creator console, Account BYOK page, Help video docs relocation, and advanced Video Project Builder toggle.
+- `prds/script-library-byok-legal-footer.md` - Product requirements and completion log for the PromptDeck default script, logged-in Script library gate, BYOK model selectors, backend model defaults, and footer legal modals.
+- `prds/prompter-background-options.md` - Product requirements and completion log for Tab 1 solid black, spotlight, and white prompter background modes.
+- `prds/account-defaults-and-about-tab.md` - Product requirements and completion log for moving default settings to Account, moving counter visibility into the Prompter gear menu, and renaming Help to About.
+- `prds/build-script-first-video-setup-cleanup.md` - Product requirements and completion log for making Build script-first, adding R2 BYOK setup visibility, and clarifying video planning does not render output until workers, R2, Mux, and job tables exist.
+- `prds/about-stack-section.md` - Product requirements and completion log for adding the in-app About Stack section.
+- `prds/about-shortcuts-layout-polish.md` - Product requirements and completion log for fixing About tab shortcut spacing and panel width.
 - `prds/production-static-hosting-deploy.md` - Product requirements for making production Convex static hosting deploys explicit.
 - `changelog.md` - Project changelog.
 - `task.md` - Completed task log.

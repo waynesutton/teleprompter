@@ -1,32 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
-  <title id="title">Teleprompt social card</title>
-  <desc id="desc">Teleprompt app preview with script writing, AI voice profiles, RSVP reading, and browser prompting.</desc>
+  <title id="title">PromptDeck social card</title>
+  <desc id="desc">PromptDeck app preview with script writing, AI voice profiles, RSVP reading, and browser prompting.</desc>
   <rect width="1200" height="630" fill="#08090b"/>
   <rect x="54" y="52" width="1092" height="526" rx="34" fill="#12151a" stroke="#303640" stroke-width="2"/>
   <rect x="92" y="92" width="1016" height="88" rx="20" fill="#171b21" stroke="#323944" stroke-width="2"/>
-  <circle cx="134" cy="136" r="21" fill="#b7ff39"/>
+  <circle cx="134" cy="136" r="21" fill="#33E7A2"/>
   <path d="M129 123v26l21-13z" fill="#08090b"/>
   <rect x="188" y="120" width="474" height="32" rx="16" fill="#2a3038"/>
-  <rect x="188" y="120" width="328" height="32" rx="16" fill="#b7ff39"/>
+  <rect x="188" y="120" width="328" height="32" rx="16" fill="#33E7A2"/>
   <rect x="704" y="112" width="122" height="48" rx="14" fill="#0c0e11" stroke="#3a424d" stroke-width="2"/>
   <text x="744" y="144" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">RSVP</text>
   <rect x="846" y="112" width="116" height="48" rx="14" fill="#0c0e11" stroke="#3a424d" stroke-width="2"/>
   <text x="886" y="144" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">1x</text>
-  <rect x="982" y="112" width="58" height="48" rx="14" fill="#b7ff39"/>
+  <rect x="982" y="112" width="58" height="48" rx="14" fill="#33E7A2"/>
   <path d="M1000 128h24M1000 144h24M1000 136h14" stroke="#08090b" stroke-width="4" stroke-linecap="round"/>
 
-  <text x="92" y="272" fill="#ffffff" font-family="Inter Tight, Inter, Arial, sans-serif" font-size="76" font-weight="800" letter-spacing="0">Teleprompt</text>
+  <text x="92" y="272" fill="#ffffff" font-family="Inter Tight, Inter, Arial, sans-serif" font-size="76" font-weight="800" letter-spacing="0">PromptDeck</text>
   <text x="96" y="326" fill="#aab0ba" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="500">Write scripts. Generate with voice profiles. Read live in your browser.</text>
 
   <rect x="92" y="382" width="314" height="112" rx="22" fill="#0c0e11" stroke="#303742" stroke-width="2"/>
-  <text x="124" y="426" fill="#b7ff39" font-family="JetBrains Mono, monospace" font-size="18" font-weight="700">SCRIPT VOICES</text>
+  <text x="124" y="426" fill="#33E7A2" font-family="JetBrains Mono, monospace" font-size="18" font-weight="700">SCRIPT VOICES</text>
   <text x="124" y="464" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="700">Custom tone profiles</text>
 
   <rect x="443" y="382" width="314" height="112" rx="22" fill="#0c0e11" stroke="#303742" stroke-width="2"/>
-  <text x="475" y="426" fill="#b7ff39" font-family="JetBrains Mono, monospace" font-size="18" font-weight="700">READING MODE</text>
+  <text x="475" y="426" fill="#33E7A2" font-family="JetBrains Mono, monospace" font-size="18" font-weight="700">READING MODE</text>
   <text x="475" y="464" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="700">RSVP + ORP</text>
 
   <rect x="794" y="382" width="314" height="112" rx="22" fill="#0c0e11" stroke="#303742" stroke-width="2"/>
-  <text x="826" y="426" fill="#b7ff39" font-family="JetBrains Mono, monospace" font-size="18" font-weight="700">WORKFLOW</text>
+  <text x="826" y="426" fill="#33E7A2" font-family="JetBrains Mono, monospace" font-size="18" font-weight="700">WORKFLOW</text>
   <text x="826" y="464" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="700">Save, organize, prompt</text>
 </svg>

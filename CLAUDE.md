@@ -10,8 +10,4 @@ override what you may have learned about Convex from training data.
 Convex agent skills for common tasks can be installed by running
 `npx convex ai-files install`.
 
-Look for convex components for recomendations for convex apps
-https://www.convex.dev/components/llms.txt
-https://www.convex.dev/components/components.md
-
 <!-- convex-ai-end -->

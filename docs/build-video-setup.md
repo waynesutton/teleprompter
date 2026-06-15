@@ -1,29 +1,31 @@
 # Build video setup
 
-This guide defines the production path for turning links, docs, scripts, and prompts into generated videos inside Teleprompt.
+This guide defines the setup path for turning links, docs, scripts, and prompts into video projects inside PromptDeck. Current app features create scripts and planning artifacts only. Real video output should not be exposed until render workers, R2 storage, Mux delivery, and dedicated Convex job tables exist.
 
 ## What Build should do
 
-Build is the logged-in workspace for everything that creates new assets:
+Build is the logged-in workspace for creating scripts first and planning video work second:
 
 - Generate a prompt-ready script from notes, URLs, markdown links, or saved scripts.
-- Save per-user API keys for AI, scraping, narration, video delivery, and avatar providers.
-- Save scripts, videos, combined Build items, and Video Project Builder drafts to the signed-in user's private library.
-- Plan video jobs from source material without blocking the normal teleprompter workflow.
-- Track video job status in Convex so the UI updates in real time.
+- Save per-user API keys for AI, scraping, narration, future storage, future video delivery, and avatar providers.
+- Save scripts, video planning notes, combined Build items, and Video Project Builder drafts to the signed-in user's private library.
+- Plan future video jobs from source material without blocking the normal teleprompter workflow.
+- Do not render, upload, or claim final video output until the infrastructure exists.
 
-Anonymous users should still be able to paste or type a script and use Prompter. Saving, Build items, Video Project Builder drafts, AI, Firecrawl, narration, transcription, and video building require GitHub login.
+Anonymous users should still be able to paste or type a script and use Prompter. Saving, Build items, Video Project Builder drafts, AI, Firecrawl, narration, transcription, R2 setup, Mux setup, and future video building require GitHub login.
 
 ## What requires keys or external services
 
 | Feature | Requirement |
 | --- | --- |
-| Save scripts, videos, or both | GitHub login. Saved Build items are private to the user. |
+| Save scripts, video planning notes, or both | GitHub login. Saved Build items are private to the user. |
 | Transcript to strategy to EDL from pasted script text | GitHub login to save. No AI key is required for the current local draft helper. |
 | URL or markdown-link context | GitHub login plus a Firecrawl API key. |
 | AI-assisted script, strategy, shot list, or EDL | GitHub login plus OpenAI, Claude, or OpenRouter. |
 | Word-level media transcription | GitHub login plus a transcription provider such as ElevenLabs Scribe or another worker-backed speech-to-text service. |
-| Final MP4 rendering | External render worker/provider such as HyperFrames, Remotion, ffmpeg, R2, and Mux. The browser and Convex actions should not render final MP4 files. |
+| R2 artifact storage setup | GitHub login plus Cloudflare R2 access key ID, secret access key, account ID, and bucket name. This is setup-only until the R2 component is wired. |
+| Mux delivery setup | GitHub login plus Mux token ID, token secret, and webhook signing secret. This is setup-only until upload/job flows exist. |
+| Final MP4 rendering | Not available yet. Requires external render workers/providers, R2 storage, Mux delivery, and dedicated Convex video job tables. The browser and Convex actions should not render final MP4 files. |
 
 ## Recommended video pipeline
 
@@ -41,16 +43,19 @@ Anonymous users should still be able to paste or type a script and use Prompter.
    - Review the strategy and EDL before any future worker starts cutting or rendering.
 
 4. **Render the composition**
+   - Do not expose render buttons until render workers, R2, Mux, and video job tables are implemented.
    - Use HyperFrames when the agent writes HTML/CSS video compositions from source material.
    - Use Remotion when the app needs React-based video templates and cloud rendering.
    - Do not render MP4s inside Convex actions. Run render workers outside Convex and write job state back to Convex.
 
 5. **Store artifacts**
-   - Use Cloudflare R2 through the Convex R2 component for large render outputs, frame captures, audio files, and intermediate artifacts.
+   - Use Cloudflare R2 through the Convex R2 component for large render outputs, frame captures, audio files, source bundles, and intermediate artifacts.
+   - Users should configure R2 in Account before future video workers can store artifacts.
    - Store only metadata and storage keys in Convex tables.
 
 6. **Deliver playback**
    - Use the Mux Convex component for uploaded assets, playback IDs, webhooks, thumbnails, and video status.
+   - Users should configure Mux in Account before future video workers can publish assets.
    - Keep Mux API credentials user-owned when rendering is BYOK, or deployment-owned if the app later offers managed video hosting.
 
 ## Provider roles
@@ -61,13 +66,13 @@ Anonymous users should still be able to paste or type a script and use Prompter.
 | OpenAI, Claude, OpenRouter | Writing and planning | Generates scripts, outlines, shot lists, and composition specs. |
 | HyperFrames | Agent-authored rendering | Best for deterministic HTML-to-video workflows and self-correcting render loops. |
 | Remotion | React video rendering | Best for React templates and Lambda or Cloud Run render backends. |
-| Cloudflare R2 | Artifact storage | Best for MP4s, frames, audio, and source bundles. |
-| Mux | Playback and asset sync | Best for uploads, asset metadata, playback IDs, webhooks, and streaming. |
+| Cloudflare R2 | Future artifact storage | Best for MP4s, frames, audio, and source bundles after the R2 component is wired. |
+| Mux | Future playback and asset sync | Best for uploads, asset metadata, playback IDs, webhooks, and streaming after upload/job flows exist. |
 | HeyGen | Optional avatar/narration | Keep separate from Script Voice Profiles and ElevenLabs narration voice. |
 
 ## Convex tables to add later
 
-Build items now store video project planning artifacts. Add dedicated job tables only when rendering workers are wired.
+Build items now store video project planning artifacts. Add dedicated job tables only when rendering workers, R2 storage, and Mux delivery are wired.
 
 ```ts
 videoJobs: {
@@ -110,7 +115,7 @@ Use Convex actions for external API calls and job orchestration. Use mutations f
 The current Build tab ships with:
 
 - Script generator moved out of Script.
-- BYOK settings for OpenAI, Claude, OpenRouter, Firecrawl, ElevenLabs, Mux, and HeyGen.
+- BYOK settings for OpenAI, Claude, OpenRouter, Firecrawl, ElevenLabs, Cloudflare R2, Mux, and HeyGen.
 - Video Project Builder fields for transcript reading view, edit strategy, EDL JSON, subtitle style, render checklist, output format, and project memory.
 - Video workflow docs in the UI and Build item cards that show project readiness.
 - Setup guide in this file.
