@@ -80,6 +80,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added DevRel and Viral Video built-in Script Voice Profiles (2026-06-15 05:16 UTC).
 - Added a screenshot-ready About Stack snapshot with BYOK chips for OpenAI, Claude, OpenRouter, Firecrawl, and ElevenLabs (2026-06-15 05:45 UTC).
 - Added an Account saved voice library so users can load and delete their custom Script Voice Profiles (2026-06-15 05:16 UTC).
+- Added browser-local draft, title, folder, and prompter settings persistence for signed-out users (2026-06-15 06:18 UTC).
+- Added authenticated current prompt persistence for signed-in users (2026-06-15 06:18 UTC).
 
 ### Changed
 
@@ -150,6 +152,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Filtered Account BYOK status chips and counts to the active script and narration services (2026-06-15 05:40 UTC).
 - Changed app links to use PromptDeck control styling instead of browser-default link styling (2026-06-15 05:56 UTC).
 - Removed the decorative gradient from the About Stack snapshot panel (2026-06-15 05:56 UTC).
+
+### Fixed
+
+- Fixed saved generated scripts appearing missing when the saved-script dropdown was filtered to a different folder (2026-06-15 06:18 UTC).
 
 ### Removed
 

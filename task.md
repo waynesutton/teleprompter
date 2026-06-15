@@ -5,6 +5,7 @@
 
 ## completed
 
+- [x] 2026-06-15 06:18 UTC - Fixed generated-script save visibility, added browser-local signed-out draft/settings persistence, and added authenticated current prompt persistence so new logged-in users still start from the default script while each signed-in user only sees their own saved library. PRD: `prds/script-save-and-local-draft-persistence.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run build`, and production deploy/smoke check.
 - [x] 2026-06-15 05:56 UTC - Styled app links to match PromptDeck controls, removed the Stack snapshot gradient, synced docs, deployed dev, deployed production, and smoke checked the production JS bundle for the production Convex URL. PRD: `prds/app-link-style-and-stack-cleanup.md`. Verified with `npm run typecheck`, `npm run lint`, `npm run deploy:static:dev`, and `npm run deploy`.
 - [x] 2026-06-15 05:45 UTC - Added a screenshot-ready About Stack snapshot with BYOK provider chips for OpenAI, Claude, OpenRouter, Firecrawl, and ElevenLabs while preserving the existing Stack text and table. PRD: `prds/about-stack-byok-showcase.md`. Verified with `npm run typecheck`, `npm run lint`, and `npm run build`.
 - [x] 2026-06-15 05:40 UTC - Moved Account ownership copy, sign out, and delete account controls to a bottom Account access panel, and filtered BYOK status/counts to the active script and narration services. PRD: `prds/account-page-cleanup.md`. Verified with `npm run typecheck`, `npm run lint`, and `npm run build`.

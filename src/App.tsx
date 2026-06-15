@@ -214,6 +214,7 @@ const DEFAULT_SETTINGS: PromptSettings = {
   layoutMode: "left",
   backgroundMode: "black",
 };
+const LOCAL_SCRIPT_CACHE_KEY = "promptdeck.localScriptState.v1";
 const MINI_VIEW_MIN_WIDTH = 360;
 const MINI_VIEW_MIN_HEIGHT = 240;
 const MINI_VIEW_MARGIN = 12;
@@ -625,6 +626,49 @@ const getFontClass = (fontFamily: PromptFont) => `font-${fontFamily}`;
 const normalizePromptFont = (fontFamily: string | undefined): PromptFont =>
   PROMPT_FONTS.includes(fontFamily as PromptFont) ? (fontFamily as PromptFont) : DEFAULT_SETTINGS.fontFamily;
 
+type LocalScriptState = {
+  draft: string;
+  settings: PromptSettings;
+  scriptTitle: string;
+  scriptFolder: string;
+  updatedAt: number;
+};
+
+const normalizeLocalSettings = (settings: Partial<PromptSettings> | null | undefined): PromptSettings => ({
+  ...DEFAULT_SETTINGS,
+  ...(settings ?? {}),
+  textColor: ["white", "red", "yellow", "grey", "darkgrey"].includes(settings?.textColor ?? "")
+    ? (settings?.textColor as TextColor)
+    : DEFAULT_SETTINGS.textColor,
+  fontFamily: normalizePromptFont(settings?.fontFamily),
+  layoutMode: settings?.layoutMode === "centered" ? "centered" : "left",
+  backgroundMode: settings?.backgroundMode === "spotlight" || settings?.backgroundMode === "white" ? settings.backgroundMode : "black",
+});
+
+const readLocalScriptState = (): LocalScriptState | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(LOCAL_SCRIPT_CACHE_KEY);
+    if (!rawValue) {
+      return null;
+    }
+
+    const value = JSON.parse(rawValue) as Partial<LocalScriptState>;
+    return {
+      draft: typeof value.draft === "string" ? value.draft : DEFAULT_SCRIPT,
+      settings: normalizeLocalSettings(value.settings),
+      scriptTitle: typeof value.scriptTitle === "string" ? value.scriptTitle : getDefaultScriptTitle(value.draft ?? DEFAULT_SCRIPT),
+      scriptFolder: typeof value.scriptFolder === "string" ? value.scriptFolder : "",
+      updatedAt: typeof value.updatedAt === "number" ? value.updatedAt : 0,
+    };
+  } catch {
+    return null;
+  }
+};
+
 const getFirstUrl = (input: string) => {
   const markdownUrl = input.match(/\[[^\]]+\]\((https?:\/\/[^)\s]+)\)/i)?.[1];
   const plainUrl = input.match(/https?:\/\/[^\s)]+/i)?.[0];
@@ -873,6 +917,7 @@ function App() {
   const getVoiceStatus = useAction(api.voice.getVoiceStatus);
   const saveUserApiKey = useAction(api.apiKeyActions.save);
   const deleteCurrentAccount = useMutation(api.users.deleteCurrentAccount);
+  const savePrompt = useMutation(api.teleprompter.save);
   const saveSharedScript = useMutation(api.teleprompter.saveSharedScript);
   const saveDefaultSettings = useMutation(api.teleprompter.saveDefaultSettings);
   const deleteSharedScript = useMutation(api.teleprompter.deleteSharedScript);
@@ -885,9 +930,12 @@ function App() {
   const saveScriptVoiceProfile = useMutation(api.scriptVoices.save);
   const deleteScriptVoiceProfile = useMutation(api.scriptVoices.remove);
   const [activeTab, setActiveTab] = useState<PromptTab>("prompter");
-  const [draft, setDraft] = useState(DEFAULT_SCRIPT);
+  const initialLocalScriptState = useRef(readLocalScriptState());
+  const previousAuthenticatedRef = useRef<boolean | null>(null);
+  const skipNextLocalPersistRef = useRef(false);
+  const [draft, setDraft] = useState(initialLocalScriptState.current?.draft ?? DEFAULT_SCRIPT);
   const [draftUndoStack, setDraftUndoStack] = useState<string[]>([]);
-  const [settings, setSettings] = useState<PromptSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<PromptSettings>(initialLocalScriptState.current?.settings ?? DEFAULT_SETTINGS);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [isStageMeterVisible, setIsStageMeterVisible] = useState(true);
   const [isPrompterDockVisible, setIsPrompterDockVisible] = useState(true);
@@ -899,8 +947,8 @@ function App() {
   const [isRewritingForRsvp, setIsRewritingForRsvp] = useState(false);
   const [rsvpMessage, setRsvpMessage] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [scriptTitle, setScriptTitle] = useState(getDefaultScriptTitle(DEFAULT_SCRIPT));
-  const [scriptFolder, setScriptFolder] = useState("");
+  const [scriptTitle, setScriptTitle] = useState(initialLocalScriptState.current?.scriptTitle ?? getDefaultScriptTitle(DEFAULT_SCRIPT));
+  const [scriptFolder, setScriptFolder] = useState(initialLocalScriptState.current?.scriptFolder ?? "");
   const [savedFolderFilter, setSavedFolderFilter] = useState("all");
   const [selectedSavedScriptId, setSelectedSavedScriptId] = useState("");
   const [libraryMessage, setLibraryMessage] = useState<string | null>(null);
@@ -1236,6 +1284,76 @@ function App() {
     });
     setLastSavedAt(savedPrompt.updatedAt);
   }, [savedPrompt]);
+
+  useEffect(() => {
+    if (authState.isLoading) {
+      return;
+    }
+
+    const wasAuthenticated = previousAuthenticatedRef.current;
+    previousAuthenticatedRef.current = isAuthenticated;
+
+    if (wasAuthenticated && !isAuthenticated) {
+      const localState = readLocalScriptState();
+      skipNextLocalPersistRef.current = true;
+      setDraft(localState?.draft ?? DEFAULT_SCRIPT);
+      setDraftUndoStack([]);
+      setSettings(localState?.settings ?? DEFAULT_SETTINGS);
+      setScriptTitle(localState?.scriptTitle ?? getDefaultScriptTitle(localState?.draft ?? DEFAULT_SCRIPT));
+      setScriptFolder(localState?.scriptFolder ?? "");
+      setSelectedSavedScriptId("");
+      setSavedFolderFilter("all");
+      setCurrentPageIndex(0);
+      resetScroll();
+      setLibraryMessage("Signed out. Using this browser's local script draft.");
+    }
+  }, [authState.isLoading, isAuthenticated, resetScroll]);
+
+  useEffect(() => {
+    if (authState.isLoading || isAuthenticated || typeof window === "undefined") {
+      return;
+    }
+
+    if (skipNextLocalPersistRef.current) {
+      skipNextLocalPersistRef.current = false;
+      return;
+    }
+
+    const localState: LocalScriptState = {
+      draft,
+      settings,
+      scriptTitle,
+      scriptFolder,
+      updatedAt: Date.now(),
+    };
+    window.localStorage.setItem(LOCAL_SCRIPT_CACHE_KEY, JSON.stringify(localState));
+  }, [authState.isLoading, draft, isAuthenticated, scriptFolder, scriptTitle, settings]);
+
+  useEffect(() => {
+    if (authState.isLoading || !isAuthenticated || savedPrompt === undefined) {
+      return;
+    }
+
+    const saveTimer = window.setTimeout(() => {
+      void savePrompt({
+        script: draft,
+        fontSize: settings.fontSize,
+        speed: settings.speed,
+        speedMultiplier: settings.speedMultiplier,
+        scroll: settings.scroll,
+        mirrored: settings.mirrored,
+        guide: settings.guide,
+        fitToWindow: settings.fitToWindow,
+        textColor: settings.textColor,
+        fontFamily: settings.fontFamily,
+        layoutMode: settings.layoutMode,
+        backgroundMode: settings.backgroundMode,
+        updatedAt: Date.now(),
+      });
+    }, 700);
+
+    return () => window.clearTimeout(saveTimer);
+  }, [authState.isLoading, draft, isAuthenticated, savedPrompt, savePrompt, settings]);
 
   useEffect(() => {
     if (!aiPromptSettings) {
@@ -1704,6 +1822,8 @@ function App() {
       setScriptFolder(folder);
       if (folder) {
         setSavedFolderFilter(folder);
+      } else if (savedFolderFilter !== "all") {
+        setSavedFolderFilter("none");
       }
       setSelectedSavedScriptId(savedId);
       setLastSavedAt(savedAt);
@@ -2273,17 +2393,37 @@ function App() {
     }
   };
 
-  const sendGeneratedScriptToEditor = () => {
+  const sendGeneratedScriptToEditor = async () => {
     if (!generatedScriptResult) {
       return;
     }
 
+    const nextScript = generatedScriptResult.script;
+    const nextTitle = scriptTitle.trim() || getDefaultScriptTitle(nextScript);
     setDraftFromTool(generatedScriptResult.script);
     setCurrentPageIndex(0);
     resetScroll();
 
     if (!scriptTitle.trim()) {
-      setScriptTitle(getDefaultScriptTitle(generatedScriptResult.script));
+      setScriptTitle(nextTitle);
+    }
+
+    if (isAuthenticated) {
+      await savePrompt({
+        script: nextScript,
+        fontSize: settings.fontSize,
+        speed: settings.speed,
+        speedMultiplier: settings.speedMultiplier,
+        scroll: 0,
+        mirrored: settings.mirrored,
+        guide: settings.guide,
+        fitToWindow: settings.fitToWindow,
+        textColor: settings.textColor,
+        fontFamily: settings.fontFamily,
+        layoutMode: settings.layoutMode,
+        backgroundMode: settings.backgroundMode,
+        updatedAt: Date.now(),
+      });
     }
 
     setIsAiGeneratorOpen(false);
