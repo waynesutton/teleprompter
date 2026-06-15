@@ -34,7 +34,6 @@ import {
   TextAlignCenter,
   Trash,
   UserCircle,
-  VideoCamera,
   X,
 } from "@phosphor-icons/react";
 import { api } from "../convex/_generated/api";
@@ -106,12 +105,13 @@ type SkillImportResult =
       message: string;
     };
 
-type UserApiKeyService = "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "r2" | "mux" | "heygen";
+type UserApiKeyService = "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs";
+type StoredApiKeyService = UserApiKeyService | "r2" | "mux" | "heygen";
 
 type UserApiKeyStatus = {
   isAuthenticated: boolean;
   keys: Array<{
-    service: UserApiKeyService;
+    service: StoredApiKeyService;
     isConfigured: boolean;
     model: string | null;
     siteUrl: string | null;
@@ -292,9 +292,6 @@ const API_KEY_SERVICE_OPTIONS: Array<SelectOption<UserApiKeyService>> = [
   { value: "openrouter", label: "OpenRouter" },
   { value: "firecrawl", label: "Firecrawl" },
   { value: "elevenlabs", label: "ElevenLabs" },
-  { value: "r2", label: "Cloudflare R2" },
-  { value: "mux", label: "Mux" },
-  { value: "heygen", label: "HeyGen" },
 ];
 const API_MODEL_OPTIONS: Partial<Record<UserApiKeyService, Array<SelectOption<string>>>> = {
   openai: [
@@ -318,15 +315,7 @@ const API_MODEL_OPTIONS: Partial<Record<UserApiKeyService, Array<SelectOption<st
     { value: "openai/gpt-5.5", label: "OpenAI GPT-5.5" },
     { value: "openai/gpt-5.4-mini", label: "OpenAI GPT-5.4 mini" },
   ],
-  mux: [
-    { value: "", label: "Paste token ID manually" },
-  ],
 };
-const BUILD_KIND_OPTIONS: Array<SelectOption<BuildItemKind>> = [
-  { value: "script", label: "Script" },
-  { value: "video", label: "Video" },
-  { value: "both", label: "Script + Video" },
-];
 const BUILD_SOURCE_OPTIONS: Array<SelectOption<BuildSourceType>> = [
   { value: "script", label: "Current script" },
   { value: "prompt", label: "Prompt" },
@@ -340,7 +329,7 @@ const BUILD_STATUS_OPTIONS: Array<SelectOption<BuildItemStatus | "all">> = [
   { value: "all", label: "All" },
 ];
 const EMPTY_BUILD_FORM = {
-  kind: "both" as BuildItemKind,
+  kind: "script" as BuildItemKind,
   sourceType: "script" as BuildSourceType,
   title: "",
   sourceText: "",
@@ -355,26 +344,8 @@ const EMPTY_BUILD_FORM = {
   outputFormat: "1920x1080 landscape, 30fps",
   notes: "",
 };
-const VIDEO_OUTPUT_OPTIONS: Array<SelectOption<string>> = [
-  { value: "1920x1080 landscape, 30fps", label: "Landscape 1080p" },
-  { value: "1080x1920 vertical, 30fps", label: "Vertical 1080p" },
-  { value: "1080x1080 square, 30fps", label: "Square 1080p" },
-  { value: "3840x2160 landscape, 24fps", label: "4K landscape" },
-];
-const DEFAULT_RENDER_CHECKLIST = [
-  "[ ] Source clips or links added",
-  "[ ] Word-level transcript generated or imported",
-  "[ ] Strategy approved before editing",
-  "[ ] EDL JSON reviewed",
-  "[ ] Cut edges stay on word boundaries",
-  "[ ] 30ms audio fades planned at every cut",
-  "[ ] Subtitles applied last",
-  "[ ] R2 storage, Mux delivery, worker, and job table requirements reviewed",
-  "[ ] No render starts until video infrastructure exists",
-].join("\n");
-const DEFAULT_SUBTITLE_STYLE = "Natural sentence case, 4-7 words per line, bottom center, high contrast, subtitles applied last.";
-const MODEL_KEY_SERVICES = new Set<UserApiKeyService>(["openai", "claude", "openrouter", "r2", "mux"]);
-const SITE_APP_KEY_SERVICES = new Set<UserApiKeyService>(["openrouter", "r2", "mux"]);
+const MODEL_KEY_SERVICES = new Set<UserApiKeyService>(["openai", "claude", "openrouter"]);
+const SITE_APP_KEY_SERVICES = new Set<UserApiKeyService>(["openrouter"]);
 const API_KEY_HELP: Record<UserApiKeyService, { keyLabel: string; modelLabel: string; modelPlaceholder: string; siteLabel: string; appLabel: string; help: string }> = {
   openai: {
     keyLabel: "API key",
@@ -416,54 +387,41 @@ const API_KEY_HELP: Record<UserApiKeyService, { keyLabel: string; modelLabel: st
     appLabel: "App name",
     help: "Used for narration voice features when voice mode is enabled.",
   },
-  r2: {
-    keyLabel: "Secret access key",
-    modelLabel: "Access key ID",
-    modelPlaceholder: "R2 access key ID",
-    siteLabel: "Account ID",
-    appLabel: "Bucket name",
-    help: "Setup-only for future video artifact storage. Rendering still needs workers, job tables, and R2 component wiring.",
-  },
-  mux: {
-    keyLabel: "Token secret",
-    modelLabel: "Token ID",
-    modelPlaceholder: "Mux token ID",
-    siteLabel: "Webhook signing secret",
-    appLabel: "Playback domain",
-    help: "Use Mux for video uploads, playback IDs, webhook sync, and delivery.",
-  },
-  heygen: {
-    keyLabel: "API key",
-    modelLabel: "Model",
-    modelPlaceholder: "",
-    siteLabel: "Site URL",
-    appLabel: "App name",
-    help: "Optional narration/avatar provider. HyperFrames itself renders locally or on workers.",
-  },
 };
 const BYOK_REQUIREMENTS: Array<{ service: UserApiKeyService; label: string; required: string; use: string }> = [
   { service: "openai", label: "OpenAI", required: "API key, optional model", use: "Generate scripts and rewrite for RSVP." },
   { service: "claude", label: "Claude", required: "API key, optional model", use: "Generate scripts and rewrite for RSVP." },
   { service: "openrouter", label: "OpenRouter", required: "API key, optional model, optional site URL/app name", use: "Route generation through OpenRouter. Use https://www.promptdeck.app as the site URL." },
   { service: "firecrawl", label: "Firecrawl", required: "API key", use: "Scrape the first pasted URL or markdown link before generation." },
-  { service: "elevenlabs", label: "ElevenLabs", required: "API key", use: "Enable narration, voice, or transcription workflows when configured." },
-  { service: "r2", label: "Cloudflare R2", required: "Access key ID, secret access key, account ID, bucket name", use: "Prepare future storage for video artifacts after R2 component and job tables exist." },
-  { service: "mux", label: "Mux", required: "Token ID, token secret, webhook signing secret", use: "Prepare future video upload, delivery, playback, and webhook sync workflows." },
-  { service: "heygen", label: "HeyGen", required: "API key", use: "Optional avatar or external video generation provider." },
+  { service: "elevenlabs", label: "ElevenLabs", required: "API key", use: "Enable narration voice features when configured." },
 ];
+const STACK_SHOWCASE = [
+  { label: "Frontend", value: "React + Vite", copy: "Fast browser scripts with TypeScript and Phosphor controls." },
+  { label: "Backend", value: "Convex", copy: "Reactive functions, database tables, auth, and static hosting." },
+  { label: "Private data", value: "GitHub login", copy: "User-owned scripts, folders, voices, prompts, defaults, and keys." },
+  { label: "Hosting", value: "Static hosting", copy: "The production app ships through the Convex static hosting component." },
+] as const;
+const STACK_BYOK_OPTIONS = [
+  ["OpenAI", "Script generation"],
+  ["Claude", "Script generation"],
+  ["OpenRouter", "Model routing"],
+  ["Firecrawl", "URL context"],
+  ["ElevenLabs", "Narration voice"],
+] as const;
+const ACTIVE_API_KEY_SERVICES = new Set<UserApiKeyService>(API_KEY_SERVICE_OPTIONS.map((option) => option.value));
 const PRIVACY_SECTIONS = [
   ["Overview", "PromptDeck is an open source browser teleprompter for writing, organizing, and reading scripts. We collect the minimum data needed to run the hosted service. You own your content. We do not sell your data."],
   ["Account data", "When you sign in with GitHub, PromptDeck stores the profile details GitHub shares with the app, such as your name, email when available, avatar, and authentication session records."],
   ["Script and build data", "If you save content after signing in, PromptDeck stores your scripts, folders, Build items, custom Script Voice Profiles, default settings, and project notes in Convex under your user account."],
-  ["Bring your own keys", "If you save API keys for OpenAI, Claude, OpenRouter, Firecrawl, ElevenLabs, Mux, or HeyGen, the raw key is encrypted server-side before storage. The app only shows configured status later, not the raw key."],
-  ["How data is used", "Your data is used to provide saved libraries, generation features, URL scraping, narration setup, and video planning workflows. We do not train AI models on your saved scripts."],
+  ["Bring your own keys", "If you save API keys for OpenAI, Claude, OpenRouter, Firecrawl, or ElevenLabs, the raw key is encrypted server-side before storage. The app only shows configured status later, not the raw key."],
+  ["How data is used", "Your data is used to provide saved libraries, generation features, URL scraping, and narration setup. We do not train AI models on your saved scripts."],
   ["Third-party services", "PromptDeck uses Convex for backend storage and GitHub OAuth through Convex Auth for login. Your own provider keys are used only when you choose features that call those providers."],
   ["Deleting data", "You can delete saved scripts and Build items from the app. Signed-in users can delete their account from Account, which removes PromptDeck-owned app data tied to that user."],
   ["Contact", "For privacy questions, open an issue at github.com/waynesutton/teleprompter."],
 ] as const;
 const TERMS_SECTIONS = [
   ["Agreement", "By using PromptDeck at www.promptdeck.app, you agree to these terms for the hosted service. The source code is open source; these terms cover the hosted app."],
-  ["Service", "PromptDeck provides script writing, live prompting, local drafting, saved libraries for signed-in users, optional AI generation, optional URL scraping, optional narration setup, and video planning tools."],
+  ["Service", "PromptDeck provides script writing, live prompting, local drafting, saved libraries for signed-in users, optional AI generation, optional URL scraping, and optional narration setup."],
   ["Your content", "You own the scripts, notes, prompts, Build items, and settings you create. You grant PromptDeck permission to store, process, and display that content only to provide the service to you."],
   ["Your responsibilities", "Do not use PromptDeck for illegal activity, malicious content, unauthorized access, or content you do not have the right to store or process."],
   ["Provider keys", "If you bring your own API keys, you are responsible for those provider accounts, usage, cost, and key rotation. Remove a key from Account if you no longer want PromptDeck to use it."],
@@ -551,6 +509,32 @@ const BUILT_IN_SCRIPT_VOICES: ScriptVoiceProfile[] = [
     defaultLength: "short",
     source: "builtin",
   },
+  {
+    id: "builtin-devrel",
+    name: "DevRel",
+    audience: "Developers, builders, technical buyers, and community members evaluating a tool or idea.",
+    tone: "Practical, clear, technically credible, and conversational. Explain what matters and why without sounding salesy.",
+    pacing: "Start with a real problem, move quickly into proof, show the useful path, and close with one concrete next step.",
+    bannedWords: "Avoid empty hype, over-polished corporate language, vague claims, and unexplained jargon.",
+    preferredPhrases: "Use specific pain points, short setup context, practical demos, tradeoffs, and direct takeaways.",
+    examples: "Sounds like a trusted technical builder walking one viewer through why a workflow matters.",
+    structure: "Hook, problem, context, demo-style beats, tradeoffs, recap, next step.",
+    defaultLength: "long",
+    source: "builtin",
+  },
+  {
+    id: "builtin-viral-video",
+    name: "Viral Video",
+    audience: "Short-form viewers who need a fast hook, useful payoff, and clear reason to keep watching.",
+    tone: "Punchy, direct, curious, and easy to record. No filler, no fake urgency, no engagement begging.",
+    pacing: "Very fast opening, one useful beat every few seconds, short spoken sentences, strongest takeaway at the end.",
+    bannedWords: "Avoid unlock, unleash, game changer, dive into, landscape, leverage, elevate, robust, cutting-edge, revolutionary, breakthrough, seamless, empower, innovative, transformative, journey, synergy, optimize, and generic hype.",
+    preferredPhrases: "Use curiosity, contrast, personal relevance, casual credibility, and one surprising payoff.",
+    examples: "A short-form script with three hook options, tight spoken sections, caption-ready phrases, and recording notes.",
+    structure: "Curiosity hook, broad relevance, credibility stamp, rapid-fire payoff, memorable close.",
+    defaultLength: "short",
+    source: "builtin",
+  },
 ];
 const EMPTY_SCRIPT_VOICE_FORM = {
   name: "",
@@ -570,9 +554,9 @@ const ABOUT_FEATURES = [
   ["Presentation defaults", "Save preferred font, color, layout, guide, and speed settings."],
   ["Keyboard control", "Use shortcuts for playback, tabs, pages, sizing, About, and undo."],
   ["Mini view", "Open a synced popup prompter for a compact recording view while keeping keyboard controls active."],
-  ["Build workspace", "Sign in to generate scripts with your saved prompt rules and save Build items. Video tools are planning-only until render workers, R2, Mux, and job tables are wired."],
+  ["Build workspace", "Sign in to generate scripts with your saved prompt rules and save reusable script Build items."],
   ["Skill-supported scripts", "Import or paste skill guidance in Account so generated scripts can follow a specific writing system."],
-  ["Optional tools", "AI script generation, Firecrawl URL context, voice, transcription, R2 storage, and Mux delivery depend on your saved provider keys or worker setup."],
+  ["Optional tools", "AI script generation, Firecrawl URL context, and narration voice depend on your saved provider keys."],
   ["Open source", "The project is open source at github.com/waynesutton/teleprompter."],
 ] as const;
 
@@ -580,38 +564,12 @@ const APP_DOCS = [
   ["Prompter", "Read the current script live. Use Start, speed, page controls, fit, guide, mirror, RSVP, and the hide-bar control for recording."],
   ["Mini View", "Use the monitor icon on Tab 1 to open a compact movable prompter. It follows the active page, scroll/RSVP mode, playback state, and keyboard shortcuts."],
   ["Script", "Write or paste the source script, preview formatting, add page breaks, save scripts into folders, and export markdown."],
-  ["Build", "Sign in to generate scripts and save Build items. Video planning uses your pasted script text; URL scraping needs Firecrawl, AI assistance needs OpenAI, Claude, or OpenRouter, transcription needs a speech-to-text provider, and real rendering needs workers, R2, Mux, and job tables."],
+  ["Build", "Sign in to generate scripts from topics, notes, links, docs, or the current draft. URL scraping needs Firecrawl, and AI generation needs OpenAI, Claude, or OpenRouter."],
   ["About", "Review shortcuts, read app docs, and check the open source feature list."],
   ["Script Voice Profiles", "Choose a writing tone for AI-generated scripts. Built-in profiles work immediately, and custom profiles can be saved, edited, deleted, or imported from notes."],
   ["Narration Voice", "Audio narration is separate from script writing tone. It only becomes usable when your ElevenLabs key is saved."],
   ["RSVP Mode", "Switch Tab 1 to RSVP to show one word at a time with a red ORP pivot letter. AI is optional and only helps rewrite scripts for easier RSVP reading."],
   ["Saving", "Generated text replaces the editor draft, but it is not saved to your library until you click a save control."],
-] as const;
-
-const VIDEO_WORKFLOW_STEPS = [
-  ["1. Gather", "Start from a link, markdown doc, pasted notes, saved script, or prompt. Firecrawl handles URL context when your key is saved."],
-  ["2. Shape", "Use Script Voice Profiles to turn source material into a spoken script, outline, shot list, and caption-ready beats."],
-  ["3. Plan", "Draft a transcript-first video project with an edit strategy, EDL JSON, subtitle style, render checklist, and persistent project memory."],
-  ["4. Prepare infrastructure", "Before real rendering, add workers, dedicated video job tables, R2 storage, and Mux delivery. Do not expose render controls before this exists."],
-  ["5. Store later", "Use R2 for large artifacts and Mux for upload, playback IDs, webhooks, thumbnails, and delivery after the storage and job pipeline is implemented."],
-  ["6. Review", "For now, save planning artifacts and send finished scripts back to Prompter. Real video status tracking starts only after job tables and workers exist."],
-] as const;
-
-const VIDEO_PROVIDER_GUIDE = [
-  ["Mux", "Video asset management, playback, direct uploads, webhooks, and streaming delivery. Use the Convex Mux component."],
-  ["HyperFrames", "Agent-authored HTML videos from links, docs, scripts, and prompts. Render with CLI/workers, not inside Convex actions."],
-  ["Remotion", "React-based video templates and cloud rendering on Lambda or Cloud Run."],
-  ["Cloudflare R2", "Future large artifact storage for MP4s, frames, audio, source captures, and downloads before sending final assets to Mux."],
-  ["HeyGen", "Optional avatar or narration workflows. Keep it separate from the script-writing voice."],
-] as const;
-
-const BUILD_REQUIREMENT_GUIDE = [
-  ["Save scripts, video plans, or both", "Requires GitHub login. Saved Build items are private to your account."],
-  ["Transcript to strategy to EDL", "Requires GitHub login to save. Drafting from pasted script text works without an AI key after login."],
-  ["URL or markdown-link context", "Requires GitHub login plus a saved Firecrawl API key."],
-  ["AI-assisted script, strategy, or EDL", "Requires GitHub login plus a saved OpenAI, Claude, or OpenRouter API key."],
-  ["Word-level transcription", "Future workflow. Requires GitHub login plus a transcription provider such as ElevenLabs Scribe or a worker-backed speech-to-text service."],
-  ["Final video rendering", "Not available yet. It requires render workers, R2 storage, Mux delivery, and dedicated Convex video job tables before any render button should exist."],
 ] as const;
 
 const SHORTCUTS = [
@@ -661,88 +619,6 @@ const getSafeMarkdownFileName = (title: string) => {
 
   return `${safeTitle || "teleprompter-script"}.md`;
 };
-
-const getVideoProjectTitle = (title: string, script: string) => title.trim() || getDefaultScriptTitle(script);
-
-const getVideoProjectTranscript = (title: string, script: string) => {
-  const lines = script
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .filter((line) => line !== "---");
-
-  if (!lines.length) {
-    return `# ${title}\n\nAdd source clips, links, or a transcript. Use word-level timestamps when transcription is connected.`;
-  }
-
-  return [
-    `# ${title}`,
-    "",
-    "## Source script reading view",
-    ...lines.slice(0, 12).map((line, index) => `[${String(index + 1).padStart(2, "0")}] ${line}`),
-    lines.length > 12 ? `\n${lines.length - 12} more lines remain in the full script.` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-};
-
-const getVideoProjectPlan = (title: string, outputFormat: string, sourceText: string, videoBrief: string) =>
-  [
-    `Strategy for ${title}`,
-    "",
-    `Output: ${outputFormat}`,
-    sourceText ? `Source: ${sourceText}` : "Source: current script or uploaded clips.",
-    videoBrief ? `Brief: ${videoBrief}` : "Brief: choose the strongest spoken beats, keep cuts on word boundaries, and build a concise reviewable edit.",
-    "",
-    "Workflow:",
-    "1. Inventory source clips, links, docs, or scripts.",
-    "2. Generate or import word-level transcript data.",
-    "3. Pack transcript into a reading view for take selection.",
-    "4. Confirm the edit strategy before any future worker uses it.",
-    "5. Produce EDL JSON, subtitle plan, and setup checklist.",
-    "6. Do not render until workers, R2, Mux, and video job tables exist.",
-  ].join("\n");
-
-const getVideoProjectEdl = (title: string, outputFormat: string, script: string) => {
-  const firstQuote = cleanRsvpText(script).split(/\s+/).slice(0, 18).join(" ") || "Add source transcript text before selecting ranges.";
-
-  return JSON.stringify(
-    {
-      version: 1,
-      title,
-      output: outputFormat,
-      status: "strategy_draft",
-      sources: [],
-      ranges: [
-        {
-          source: "source-01",
-          start: 0,
-          end: 0,
-          beat: "HOOK",
-          quote: firstQuote,
-          reason: "Starter beat. Replace start/end after word-level transcript import.",
-        },
-      ],
-      subtitles: "planned",
-      overlays: [],
-      render: {
-        engine: "not_configured",
-        notes: "Planning only. Add workers, R2 storage, Mux delivery, and Convex video job tables before rendering.",
-      },
-    },
-    null,
-    2,
-  );
-};
-
-const getVideoProjectMemory = (title: string) =>
-  [
-    `## Session 1 - ${new Date().toISOString().slice(0, 10)}`,
-    `**Project:** ${title}`,
-    "**Strategy:** Drafted a transcript-first video project workspace.",
-    "**Decisions:** Confirm strategy before any worker uses it. Use transcript and EDL as the source of truth.",
-    "**Outstanding:** Add source clips, import word-level transcript data, review the EDL, then configure workers, R2, Mux, and job tables before rendering.",
-  ].join("\n");
 
 const getFontClass = (fontFamily: PromptFont) => `font-${fontFamily}`;
 
@@ -1046,7 +922,6 @@ function App() {
   const [isAiSetupModalOpen, setIsAiSetupModalOpen] = useState(false);
   const [isCheckingAiSetup, setIsCheckingAiSetup] = useState(false);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
-  const [aiProviderStatus, setAiProviderStatus] = useState<AiProviderStatus | null>(null);
   const [aiProvider, setAiProvider] = useState<AiProvider>("auto");
   const [aiLength, setAiLength] = useState<AiLength>("short");
   const [selectedScriptVoiceId, setSelectedScriptVoiceId] = useState("builtin-natural");
@@ -1072,11 +947,9 @@ function App() {
   const [buildForm, setBuildForm] = useState(EMPTY_BUILD_FORM);
   const [editingBuildItemId, setEditingBuildItemId] = useState<Id<"buildItems"> | null>(null);
   const [buildMessage, setBuildMessage] = useState<string | null>(null);
-  const [isVideoProjectAdvancedOpen, setIsVideoProjectAdvancedOpen] = useState(false);
   const [isSavingBuildItem, setIsSavingBuildItem] = useState(false);
   const [isUpdatingBuildItem, setIsUpdatingBuildItem] = useState(false);
   const [buildPendingDeleteId, setBuildPendingDeleteId] = useState<Id<"buildItems"> | null>(null);
-  const [aiModelOverride, setAiModelOverride] = useState("");
   const [aiInstructions, setAiInstructions] = useState("");
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [generatedScriptResult, setGeneratedScriptResult] = useState<GeneratedScriptResult | null>(null);
@@ -1100,6 +973,10 @@ function App() {
   const savedScripts = useMemo(() => savedScriptsQuery ?? [], [savedScriptsQuery]);
   const savedScriptVoiceProfiles = useMemo(() => savedScriptVoiceProfilesQuery ?? [], [savedScriptVoiceProfilesQuery]);
   const buildItems = useMemo(() => buildItemsQuery ?? [], [buildItemsQuery]);
+  const activeApiKeyStatuses = useMemo(
+    () => (apiKeyStatus?.keys ?? []).filter((key) => ACTIVE_API_KEY_SERVICES.has(key.service as UserApiKeyService)),
+    [apiKeyStatus],
+  );
   const visibleBuildItems = useMemo(() => {
     if (buildStatusFilter === "all") {
       return buildItems;
@@ -1119,13 +996,12 @@ function App() {
         buildForm.title ? `Title: ${buildForm.title}` : "",
         buildForm.sourceText,
         buildForm.scriptSnapshot,
-        buildForm.videoBrief,
         buildForm.notes,
       ]
         .map((value) => value.trim())
         .filter(Boolean)
         .join("\n\n"),
-    [buildForm.notes, buildForm.scriptSnapshot, buildForm.sourceText, buildForm.title, buildForm.videoBrief],
+    [buildForm.notes, buildForm.scriptSnapshot, buildForm.sourceText, buildForm.title],
   );
   const getAiGeneratorSource = () => (activeTab === "build" ? buildGeneratorSource.trim() : draft.trim());
   const scriptVoiceProfiles = useMemo<ScriptVoiceProfile[]>(() => {
@@ -1874,7 +1750,7 @@ function App() {
     }
 
     if (!source) {
-      setAiMessage("Add a topic, notes, URL, markdown link, script, or video brief before generating.");
+      setAiMessage("Add a topic, notes, URL, markdown link, or script before generating.");
       return;
     }
 
@@ -1884,7 +1760,6 @@ function App() {
       const status = await getAiProviderStatus();
       const nextStatus = status as AiProviderStatus;
       const hasUrl = Boolean(getFirstUrl(source));
-      setAiProviderStatus(nextStatus);
 
       if (nextStatus.providers.length === 0 || (hasUrl && !nextStatus.hasFirecrawl)) {
         setAiSetupMessage(
@@ -2094,58 +1969,37 @@ function App() {
     const nextTitle = scriptTitle.trim() || getDefaultScriptTitle(draft);
     setBuildForm((current) => ({
       ...current,
-      kind: current.kind === "video" ? "both" : current.kind,
+      kind: "script",
       sourceType: "script",
       title: nextTitle,
       scriptSnapshot: draft,
       sourceText: current.sourceText || nextTitle,
-      transcriptText: current.transcriptText || getVideoProjectTranscript(nextTitle, draft),
+      transcriptText: "",
+      editPlan: "",
+      edlJson: "",
+      subtitleStyle: "",
+      renderChecklist: "",
+      projectMemory: "",
+      outputFormat: "",
     }));
     setBuildMessage("Current script added to the Build form.");
   };
 
-  const draftVideoProject = () => {
-    if (!requireLogin("Sign in with GitHub to draft and save Video Project Builder work.")) {
-      return;
-    }
-
-    const title = getVideoProjectTitle(buildForm.title || scriptTitle, buildForm.scriptSnapshot || draft);
-    const scriptSnapshot = buildForm.scriptSnapshot || draft;
-    const outputFormat = buildForm.outputFormat || EMPTY_BUILD_FORM.outputFormat;
-
-    setBuildForm((current) => ({
-      ...current,
-      kind: current.kind === "script" ? "both" : current.kind,
-      sourceType: current.sourceType || "script",
-      title,
-      scriptSnapshot,
-      outputFormat,
-      transcriptText: current.transcriptText || getVideoProjectTranscript(title, scriptSnapshot),
-      editPlan: getVideoProjectPlan(title, outputFormat, current.sourceText, current.videoBrief),
-      edlJson: current.edlJson || getVideoProjectEdl(title, outputFormat, scriptSnapshot),
-      subtitleStyle: current.subtitleStyle || DEFAULT_SUBTITLE_STYLE,
-      renderChecklist: current.renderChecklist || DEFAULT_RENDER_CHECKLIST,
-      projectMemory: current.projectMemory || getVideoProjectMemory(title),
-      notes: current.notes || "Video Project draft created. Confirm the strategy before any future render job.",
-    }));
-    setBuildMessage("Video Project draft created. Review the strategy and EDL before saving.");
-  };
-
   const editBuildItem = (item: BuildItem) => {
     setBuildForm({
-      kind: item.kind,
+      kind: "script",
       sourceType: item.sourceType,
       title: item.title,
       sourceText: item.sourceText ?? "",
       scriptSnapshot: item.scriptSnapshot ?? "",
-      videoBrief: item.videoBrief ?? "",
-      transcriptText: item.transcriptText ?? "",
-      editPlan: item.editPlan ?? "",
-      edlJson: item.edlJson ?? "",
-      subtitleStyle: item.subtitleStyle ?? "",
-      renderChecklist: item.renderChecklist ?? "",
-      projectMemory: item.projectMemory ?? "",
-      outputFormat: item.outputFormat ?? EMPTY_BUILD_FORM.outputFormat,
+      videoBrief: "",
+      transcriptText: "",
+      editPlan: "",
+      edlJson: "",
+      subtitleStyle: "",
+      renderChecklist: "",
+      projectMemory: "",
+      outputFormat: "",
       notes: item.notes ?? "",
     });
     setEditingBuildItemId(item._id);
@@ -2158,7 +2012,7 @@ function App() {
     }
 
     const title = buildForm.title.trim() || scriptTitle.trim() || getDefaultScriptTitle(draft);
-    const scriptSnapshot = buildForm.kind === "video" ? buildForm.scriptSnapshot : buildForm.scriptSnapshot || draft;
+    const scriptSnapshot = buildForm.scriptSnapshot || draft;
 
     if (!title) {
       setBuildMessage("Add a title before saving.");
@@ -2171,19 +2025,19 @@ function App() {
     try {
       const savedId = await saveBuildItem({
         itemId: editingBuildItemId ?? undefined,
-        kind: buildForm.kind,
+        kind: "script",
         sourceType: buildForm.sourceType,
         title,
         sourceText: buildForm.sourceText,
         scriptSnapshot,
-        videoBrief: buildForm.videoBrief,
-        transcriptText: buildForm.transcriptText,
-        editPlan: buildForm.editPlan,
-        edlJson: buildForm.edlJson,
-        subtitleStyle: buildForm.subtitleStyle,
-        renderChecklist: buildForm.renderChecklist,
-        projectMemory: buildForm.projectMemory,
-        outputFormat: buildForm.outputFormat,
+        videoBrief: "",
+        transcriptText: "",
+        editPlan: "",
+        edlJson: "",
+        subtitleStyle: "",
+        renderChecklist: "",
+        projectMemory: "",
+        outputFormat: "",
         notes: buildForm.notes,
         updatedAt: Date.now(),
       });
@@ -2253,19 +2107,24 @@ function App() {
     setBuildMessage(`Loaded "${item.title}" into Script.`);
   };
 
-  const loadSelectedVoiceIntoForm = () => {
+  const loadScriptVoiceIntoForm = (profile: ScriptVoiceProfile) => {
+    setSelectedScriptVoiceId(profile.id);
     setScriptVoiceForm({
-      name: selectedScriptVoice.name,
-      audience: selectedScriptVoice.audience,
-      tone: selectedScriptVoice.tone,
-      pacing: selectedScriptVoice.pacing,
-      bannedWords: selectedScriptVoice.bannedWords,
-      preferredPhrases: selectedScriptVoice.preferredPhrases,
-      examples: selectedScriptVoice.examples,
-      structure: selectedScriptVoice.structure,
-      defaultLength: selectedScriptVoice.defaultLength,
+      name: profile.name,
+      audience: profile.audience,
+      tone: profile.tone,
+      pacing: profile.pacing,
+      bannedWords: profile.bannedWords,
+      preferredPhrases: profile.preferredPhrases,
+      examples: profile.examples,
+      structure: profile.structure,
+      defaultLength: profile.defaultLength,
     });
-    setScriptVoiceMessage(`Loaded "${selectedScriptVoice.name}" into the custom profile editor.`);
+    setScriptVoiceMessage(`Loaded "${profile.name}" into the custom profile editor.`);
+  };
+
+  const loadSelectedVoiceIntoForm = () => {
+    loadScriptVoiceIntoForm(selectedScriptVoice);
   };
 
   const clearScriptVoiceForm = () => {
@@ -2336,10 +2195,35 @@ function App() {
     }
   };
 
+  const deleteCustomScriptVoiceById = async (profileId: Id<"scriptVoiceProfiles">, name: string) => {
+    if (!requireLogin("Sign in with GitHub to delete custom Script Voice Profiles.")) {
+      return;
+    }
+
+    setIsDeletingScriptVoice(true);
+
+    try {
+      const didDelete = await deleteScriptVoiceProfile({ profileId });
+
+      if (!didDelete) {
+        setScriptVoiceMessage("That custom script voice was already deleted.");
+        return;
+      }
+
+      if (selectedScriptVoiceId === `custom:${profileId}`) {
+        setSelectedScriptVoiceId("builtin-natural");
+      }
+
+      setScriptVoiceMessage(`Deleted "${name}".`);
+    } finally {
+      setIsDeletingScriptVoice(false);
+    }
+  };
+
   const generateScriptFromAi = async () => {
     const source = getAiGeneratorSource();
     if (!source) {
-      setAiMessage("Add a topic, notes, URL, markdown link, script, or video brief before generating.");
+      setAiMessage("Add a topic, notes, URL, markdown link, or script before generating.");
       return;
     }
 
@@ -2351,7 +2235,6 @@ function App() {
       const result = await generateAiScript({
         input: source,
         provider: aiProvider,
-        modelOverride: aiModelOverride.trim() || undefined,
         length: aiLength === "open" && selectedScriptVoice.defaultLength !== "open" ? selectedScriptVoice.defaultLength : aiLength,
         scriptVoiceProfile: {
           name: selectedScriptVoice.name,
@@ -2404,6 +2287,7 @@ function App() {
     }
 
     setIsAiGeneratorOpen(false);
+    setActiveTab("script");
     setAiMessage(`Sent generated script from ${generatedScriptResult.model} to Script.`);
   };
 
@@ -2438,7 +2322,6 @@ function App() {
     try {
       const status = await getAiProviderStatus();
       const nextStatus = status as AiProviderStatus;
-      setAiProviderStatus(nextStatus);
 
       if (nextStatus.providers.length === 0) {
         setAiSetupMessage("These options are not setup. Contact the app creator to config.");
@@ -2449,7 +2332,6 @@ function App() {
       const result = await rewriteScriptForRsvp({
         input: source,
         provider: aiProvider,
-        modelOverride: aiModelOverride.trim() || undefined,
       });
 
       if (!result.ok) {
@@ -2517,13 +2399,13 @@ function App() {
       return;
     }
 
-    const cursor = textarea.selectionStart;
+    const caret = textarea.selectionStart;
     const pageBreak = "\n\n---\n\n";
-    const nextDraft = `${draft.slice(0, cursor)}${pageBreak}${draft.slice(textarea.selectionEnd)}`;
+    const nextDraft = `${draft.slice(0, caret)}${pageBreak}${draft.slice(textarea.selectionEnd)}`;
     setDraftFromTool(nextDraft);
     window.requestAnimationFrame(() => {
       textarea.focus();
-      textarea.setSelectionRange(cursor + pageBreak.length, cursor + pageBreak.length);
+      textarea.setSelectionRange(caret + pageBreak.length, caret + pageBreak.length);
     });
   };
 
@@ -2684,7 +2566,7 @@ function App() {
           className={activeTab === "build" ? "tab has-tooltip is-active" : "tab has-tooltip"}
           onClick={() => setActiveTab("build")}
           aria-current={activeTab === "build" ? "page" : undefined}
-          title="Open the script and video builder"
+          title="Open the script builder"
           data-tooltip="Build workspace"
           type="button"
         >
@@ -3191,7 +3073,7 @@ function App() {
                     className="tool-button has-tooltip"
                     type="button"
                     onClick={insertPageBreak}
-                    title="Insert a page break at the cursor"
+                    title="Insert a page break at the caret"
                     data-tooltip="Insert page break"
                   >
                     Add Page Break
@@ -3379,7 +3261,7 @@ function App() {
               <div>
                 <p className="eyebrow">Build</p>
                 <h1>Generate scripts.</h1>
-                <p className="panel-copy">Build is for signed-in users. Add source material, choose your AI setup, and create a teleprompter-ready script. Video work below is planning-only until workers, R2, Mux, and job tables exist.</p>
+                <p className="panel-copy">Build is for signed-in users. Add source material, choose your AI setup, and create a teleprompter-ready script.</p>
               </div>
               {!isAuthenticated ? (
                 <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
@@ -3414,12 +3296,9 @@ function App() {
                 </label>
                 <div className="field-control">
                   <span>Build type</span>
-                  <CustomSelect
-                    ariaLabel="Build type"
-                    value={buildForm.kind}
-                    options={BUILD_KIND_OPTIONS}
-                    onChange={(value) => setBuildForm((current) => ({ ...current, kind: value }))}
-                  />
+                  <div className="readonly-select" aria-label="Build type">
+                    Script
+                  </div>
                 </div>
                 <div className="field-control">
                   <span>Source</span>
@@ -3448,15 +3327,6 @@ function App() {
                     placeholder="Use current Script text, paste a draft, or leave blank until generation"
                   />
                 </label>
-                <label className="field-control build-textarea-field" htmlFor="build-video-brief">
-                  <span>Optional video planning note</span>
-                  <textarea
-                    id="build-video-brief"
-                    value={buildForm.videoBrief}
-                    onChange={(event) => setBuildForm((current) => ({ ...current, videoBrief: event.target.value }))}
-                    placeholder="Optional: format, visuals, captions, narration, and setup notes. This does not render video."
-                  />
-                </label>
               </div>
               <div className="build-generator-card" aria-label="Script generator">
                 <div>
@@ -3479,44 +3349,12 @@ function App() {
             </section>
             {aiMessage ? <p className="library-message">{aiMessage}</p> : null}
 
-            <section className="settings-panel video-build-panel" aria-label="Video planning setup">
-              <div className="api-settings-header">
-                <div>
-                  <p className="eyebrow">Video planning</p>
-                  <h2>Plan video work after the script.</h2>
-                  <p className="panel-copy">Video planning is a logged-in feature for saving briefs, transcript notes, EDL drafts, and setup checklists. Real rendering is not available until render workers, R2 storage, Mux delivery, and Convex video job tables exist.</p>
-                </div>
-                <button
-                  className="save-button"
-                  type="button"
-                  onClick={() => {
-                    if (!requireLogin("Sign in with GitHub to configure video planning and provider keys.")) {
-                      return;
-                    }
-                    setActiveTab("account");
-                    setApiKeyMessage("Configure Firecrawl, AI providers, R2, Mux, and optional voice/avatar keys before future video workflows.");
-                  }}
-                >
-                  <Article size={17} weight="bold" />
-                  Account Setup
-                </button>
-              </div>
-              <div className="build-requirement-grid" aria-label="Video setup requirements">
-                {BUILD_REQUIREMENT_GUIDE.map(([title, copy]) => (
-                  <article className="build-requirement-card" key={title}>
-                    <h3>{title}</h3>
-                    <p>{copy}</p>
-                  </article>
-                ))}
-              </div>
-            </section>
-
             <section className="settings-panel build-library-panel" aria-label="Build library">
               <div className="api-settings-header">
                 <div>
                   <p className="eyebrow">Build library</p>
-                  <h2>Save scripts, videos, or both.</h2>
-                  <p className="panel-copy">Sign in with GitHub to save private script drafts, video planning notes, or combined Build items. Active items stay in the workspace; archived items stay out of the way until restored.</p>
+                  <h2>Save generated scripts.</h2>
+                  <p className="panel-copy">Sign in with GitHub to save private script drafts and reusable Build items. Active items stay in the workspace; archived items stay out of the way until restored.</p>
                 </div>
                 <div className="build-summary">
                   <span>{activeBuildCount} active</span>
@@ -3536,99 +3374,6 @@ function App() {
                 </label>
               </div>
 
-              <button
-                className={isVideoProjectAdvancedOpen ? "advanced-toggle is-open" : "advanced-toggle"}
-                type="button"
-                onClick={() => setIsVideoProjectAdvancedOpen((current) => !current)}
-                aria-expanded={isVideoProjectAdvancedOpen}
-                aria-controls="video-project-builder"
-              >
-                <CaretDown size={16} weight="bold" />
-                Advanced video planning
-              </button>
-
-              {isVideoProjectAdvancedOpen ? (
-              <section id="video-project-builder" className="video-project-panel" aria-label="Video Project Builder">
-                <div className="api-settings-header">
-                  <div>
-                    <p className="eyebrow">Video Project Builder</p>
-                    <h2>Transcript to strategy to EDL.</h2>
-                    <p className="panel-copy">Logged-in users can create a readable planning package from pasted script text. This does not render video. Real video output needs workers, R2, Mux, and dedicated job tables first. Configure provider keys in Account.</p>
-                  </div>
-                  <button className="save-button is-primary-action" type="button" onClick={draftVideoProject}>
-                    <VideoCamera size={17} weight="bold" />
-                    Draft Video Plan
-                  </button>
-                </div>
-                <div className="video-project-grid">
-                  <div className="field-control">
-                    <span>Output format</span>
-                    <CustomSelect
-                      ariaLabel="Video output format"
-                      value={buildForm.outputFormat}
-                      options={VIDEO_OUTPUT_OPTIONS}
-                      onChange={(value) => setBuildForm((current) => ({ ...current, outputFormat: value }))}
-                    />
-                  </div>
-                  <label className="field-control build-textarea-field" htmlFor="build-transcript">
-                    <span>Transcript reading view</span>
-                    <textarea
-                      id="build-transcript"
-                      value={buildForm.transcriptText}
-                      onChange={(event) => setBuildForm((current) => ({ ...current, transcriptText: event.target.value }))}
-                      placeholder="Paste or draft the transcript. Keep this easy to scan and search."
-                    />
-                  </label>
-                  <label className="field-control build-textarea-field" htmlFor="build-edit-plan">
-                    <span>Edit strategy</span>
-                    <textarea
-                      id="build-edit-plan"
-                      value={buildForm.editPlan}
-                      onChange={(event) => setBuildForm((current) => ({ ...current, editPlan: event.target.value }))}
-                      placeholder="Confirm the edit strategy before cutting: pacing, keeper shots, hooks, trims, visuals, and review notes."
-                    />
-                  </label>
-                  <label className="field-control build-textarea-field is-code is-wide" htmlFor="build-edl">
-                    <span>EDL JSON</span>
-                    <textarea
-                      id="build-edl"
-                      value={buildForm.edlJson}
-                      onChange={(event) => setBuildForm((current) => ({ ...current, edlJson: event.target.value }))}
-                      placeholder='{"version":"promptdeck.edl.v1","sources":[],"ranges":[]}'
-                    />
-                  </label>
-                  <label className="field-control build-textarea-field is-compact" htmlFor="build-subtitle-style">
-                    <span>Subtitle style</span>
-                    <textarea
-                      id="build-subtitle-style"
-                      value={buildForm.subtitleStyle}
-                      onChange={(event) => setBuildForm((current) => ({ ...current, subtitleStyle: event.target.value }))}
-                      placeholder="Describe subtitle timing, casing, placement, and contrast."
-                    />
-                  </label>
-                  <label className="field-control build-textarea-field is-compact" htmlFor="build-checklist">
-                    <span>Render checklist</span>
-                    <textarea
-                      id="build-checklist"
-                      value={buildForm.renderChecklist}
-                      onChange={(event) => setBuildForm((current) => ({ ...current, renderChecklist: event.target.value }))}
-                      placeholder="Track transcript, cut, subtitle, review, storage, delivery, worker, and job table requirements."
-                    />
-                  </label>
-                  <label className="field-control build-textarea-field is-wide" htmlFor="build-memory">
-                    <span>Project memory</span>
-                    <textarea
-                      id="build-memory"
-                      value={buildForm.projectMemory}
-                      onChange={(event) => setBuildForm((current) => ({ ...current, projectMemory: event.target.value }))}
-                      placeholder="Keep persistent decisions, source notes, approvals, setup requirements, and what changed between versions."
-                    />
-                  </label>
-                </div>
-                <p className="editor-note">This creates reviewable planning instructions only. The browser does not transcribe source media, render final MP4 files, or upload video assets by itself.</p>
-              </section>
-              ) : null}
-
               <div className="build-action-row">
                 <button className="save-button" type="button" onClick={seedBuildFromCurrentScript}>
                   <Article size={17} weight="bold" />
@@ -3636,7 +3381,7 @@ function App() {
                 </button>
                 <button className="save-button is-primary-action" type="button" onClick={saveCurrentBuildItem} disabled={isSavingBuildItem}>
                   <FloppyDisk size={17} weight="bold" />
-                  {isSavingBuildItem ? "Saving" : editingBuildItemId ? "Update Build Item" : "Save Build Item"}
+                  {isSavingBuildItem ? "Saving" : editingBuildItemId ? "Update Script Item" : "Save Script Item"}
                 </button>
                 <button className="save-button" type="button" onClick={clearBuildForm}>
                   <Plus size={17} weight="bold" />
@@ -3662,22 +3407,13 @@ function App() {
                       <div>
                         <div className="build-item-heading">
                           <span className="build-kind-chip">
-                            {item.kind === "video" ? <VideoCamera size={14} weight="bold" /> : <Article size={14} weight="bold" />}
-                            {BUILD_KIND_OPTIONS.find((option) => option.value === item.kind)?.label ?? item.kind}
+                            <Article size={14} weight="bold" />
+                            Script
                           </span>
                           <span className="build-status-chip">{item.status}</span>
-                          {item.transcriptText || item.edlJson || item.editPlan ? <span className="build-status-chip is-video-project">video project</span> : null}
                         </div>
                         <h3>{item.title}</h3>
-                        <p>{item.editPlan || item.videoBrief || item.sourceText || item.notes || "No brief added yet."}</p>
-                        {item.transcriptText || item.edlJson || item.renderChecklist ? (
-                          <div className="build-readiness-row" aria-label="Video project readiness">
-                            <span className={item.transcriptText ? "is-ready" : undefined}>Transcript</span>
-                            <span className={item.edlJson ? "is-ready" : undefined}>EDL</span>
-                            <span className={item.renderChecklist ? "is-ready" : undefined}>Checklist</span>
-                            {item.outputFormat ? <span className="is-ready">{item.outputFormat}</span> : null}
-                          </div>
-                        ) : null}
+                        <p>{item.scriptSnapshot || item.sourceText || item.notes || "No script text added yet."}</p>
                         <div className="build-item-meta">
                           <span>{BUILD_SOURCE_OPTIONS.find((option) => option.value === item.sourceType)?.label ?? item.sourceType}</span>
                           <span>Updated {new Date(item.updatedAt).toLocaleDateString()}</span>
@@ -3709,7 +3445,7 @@ function App() {
                     </article>
                   ))
                 ) : (
-                  <p className="editor-note">No Build items in this view yet. Save a script, video planning note, or combined build to start.</p>
+                  <p className="editor-note">No script Build items in this view yet. Generate or save a script to start.</p>
                 )}
               </div>
 
@@ -3782,39 +3518,10 @@ function App() {
                       custom voices
                     </span>
                     <span>
-                      <strong>{apiKeyStatus?.keys.filter((key) => key.isConfigured).length ?? 0}</strong>
+                      <strong>{activeApiKeyStatuses.filter((key) => key.isConfigured).length}</strong>
                       BYOK keys
                     </span>
                   </div>
-                  <p className="modal-copy">
-                    This account owns your saved scripts, folders, Build items, custom Script Voice Profiles, and encrypted BYOK settings.
-                  </p>
-                  {accountMessage ? <p className="library-message">{accountMessage}</p> : null}
-                  {isDeleteAccountConfirmOpen ? (
-                    <div className="account-delete-confirm" role="alert" aria-label="Delete account confirmation">
-                      <p>Delete this account and its saved PromptDeck data? This removes scripts, folders, Build items, custom voices, saved keys, and profile data.</p>
-                      <div className="modal-actions">
-                        <button className="save-button" type="button" onClick={() => setIsDeleteAccountConfirmOpen(false)} disabled={isDeletingAccount}>
-                          Cancel
-                        </button>
-                        <button className="danger-button" type="button" onClick={deleteSignedInAccount} disabled={isDeletingAccount}>
-                          <Trash size={17} weight="bold" />
-                          {isDeletingAccount ? "Deleting" : "Delete account"}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="modal-actions">
-                      <button className="save-button" type="button" onClick={() => void signOutFromAccount()}>
-                        <SignOut size={17} weight="bold" />
-                        Sign out
-                      </button>
-                      <button className="danger-button" type="button" onClick={() => setIsDeleteAccountConfirmOpen(true)}>
-                        <Trash size={17} weight="bold" />
-                        Delete account
-                      </button>
-                    </div>
-                  )}
                 </section>
 
                 <section className="settings-panel ai-prompt-settings-panel" aria-label="Script generator prompt settings">
@@ -3896,6 +3603,193 @@ function App() {
                   {aiPromptMessage ? <p className="library-message">{aiPromptMessage}</p> : null}
                 </section>
 
+                <section className="settings-panel voice-profile-editor account-voice-panel" aria-label="Script Voice Profile settings">
+                  <div className="voice-profile-header">
+                    <div>
+                      <p className="eyebrow">Script voices</p>
+                      <h2>Reusable writing tones.</h2>
+                      <p className="panel-copy">
+                        Create custom Script Voice Profiles here, then load them from the Generate Script modal dropdown.
+                      </p>
+                    </div>
+                    <div className="voice-profile-actions">
+                      <button className="tool-button" type="button" onClick={loadSelectedVoiceIntoForm}>
+                        Load Selected
+                      </button>
+                      <button className="tool-button" type="button" onClick={clearScriptVoiceForm}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="voice-profile-grid">
+                    <label className="field-control" htmlFor="voice-profile-name">
+                      <span>Name</span>
+                      <input
+                        id="voice-profile-name"
+                        type="text"
+                        value={scriptVoiceForm.name}
+                        onChange={(event) => setScriptVoiceForm((current) => ({ ...current, name: event.target.value }))}
+                        placeholder="My founder voice"
+                      />
+                    </label>
+                    <label className="field-control" htmlFor="voice-profile-audience">
+                      <span>Audience</span>
+                      <input
+                        id="voice-profile-audience"
+                        type="text"
+                        value={scriptVoiceForm.audience}
+                        onChange={(event) => setScriptVoiceForm((current) => ({ ...current, audience: event.target.value }))}
+                        placeholder="Founders, creators, operators"
+                      />
+                    </label>
+                    <label className="field-control ai-modal-wide" htmlFor="voice-profile-tone">
+                      <span>Tone</span>
+                      <textarea
+                        id="voice-profile-tone"
+                        className="modal-textarea is-compact"
+                        value={scriptVoiceForm.tone}
+                        onChange={(event) => setScriptVoiceForm((current) => ({ ...current, tone: event.target.value }))}
+                        placeholder="Direct, practical, strong point of view, no hype."
+                      />
+                    </label>
+                    <label className="field-control" htmlFor="voice-profile-pacing">
+                      <span>Pacing</span>
+                      <input
+                        id="voice-profile-pacing"
+                        type="text"
+                        value={scriptVoiceForm.pacing}
+                        onChange={(event) => setScriptVoiceForm((current) => ({ ...current, pacing: event.target.value }))}
+                        placeholder="Short spoken sentences"
+                      />
+                    </label>
+                    <div className="field-control">
+                      <span>Default length</span>
+                      <CustomSelect
+                        ariaLabel="Profile default length"
+                        value={scriptVoiceForm.defaultLength}
+                        options={AI_LENGTH_OPTIONS}
+                        onChange={(value) => setScriptVoiceForm((current) => ({ ...current, defaultLength: value }))}
+                      />
+                    </div>
+                    <label className="field-control ai-modal-wide" htmlFor="voice-profile-banned">
+                      <span>Banned words</span>
+                      <input
+                        id="voice-profile-banned"
+                        type="text"
+                        value={scriptVoiceForm.bannedWords}
+                        onChange={(event) => setScriptVoiceForm((current) => ({ ...current, bannedWords: event.target.value }))}
+                        placeholder="No hype, no generic AI phrases"
+                      />
+                    </label>
+                    <label className="field-control ai-modal-wide" htmlFor="voice-profile-preferred">
+                      <span>Preferred phrases</span>
+                      <input
+                        id="voice-profile-preferred"
+                        type="text"
+                        value={scriptVoiceForm.preferredPhrases}
+                        onChange={(event) => setScriptVoiceForm((current) => ({ ...current, preferredPhrases: event.target.value }))}
+                        placeholder="Use practical next steps and specific examples"
+                      />
+                    </label>
+                    <label className="field-control ai-modal-wide" htmlFor="voice-profile-structure">
+                      <span>Structure</span>
+                      <input
+                        id="voice-profile-structure"
+                        type="text"
+                        value={scriptVoiceForm.structure}
+                        onChange={(event) => setScriptVoiceForm((current) => ({ ...current, structure: event.target.value }))}
+                        placeholder="Hook, context, recommendation, close"
+                      />
+                    </label>
+                    <label className="field-control ai-modal-wide" htmlFor="voice-profile-examples">
+                      <span>Examples / import markdown</span>
+                      <textarea
+                        id="voice-profile-examples"
+                        className="modal-textarea"
+                        value={scriptVoiceForm.examples}
+                        onChange={(event) => setScriptVoiceForm((current) => ({ ...current, examples: event.target.value }))}
+                        placeholder="Paste sample lines, markdown notes, or a style guide here."
+                      />
+                    </label>
+                  </div>
+                  {scriptVoiceMessage ? <p className="library-message modal-message">{scriptVoiceMessage}</p> : null}
+                  <div className="custom-voice-library" aria-label="Saved custom Script Voice Profiles">
+                    <div className="voice-profile-header">
+                      <div>
+                        <p className="eyebrow">Saved voices</p>
+                        <h3>Your custom Script Voice Profiles</h3>
+                      </div>
+                      <span className="build-status-chip">{savedScriptVoiceProfiles.length} saved</span>
+                    </div>
+                    {savedScriptVoiceProfiles.length > 0 ? (
+                      <div className="custom-voice-list">
+                        {savedScriptVoiceProfiles.map((profile) => {
+                          const voiceProfile: ScriptVoiceProfile = {
+                            id: `custom:${profile._id}`,
+                            name: profile.name,
+                            audience: profile.audience,
+                            tone: profile.tone,
+                            pacing: profile.pacing,
+                            bannedWords: profile.bannedWords,
+                            preferredPhrases: profile.preferredPhrases,
+                            examples: profile.examples,
+                            structure: profile.structure,
+                            defaultLength: profile.defaultLength,
+                            source: "custom",
+                          };
+
+                          return (
+                            <article className="custom-voice-card" key={profile._id}>
+                              <div>
+                                <h4>{profile.name}</h4>
+                                <p>{profile.tone}</p>
+                                <span>{profile.audience || "No audience set"}</span>
+                              </div>
+                              <div className="custom-voice-card-actions">
+                                <button className="tool-button" type="button" onClick={() => loadScriptVoiceIntoForm(voiceProfile)}>
+                                  <PencilSimple size={16} weight="bold" />
+                                  Load
+                                </button>
+                                <button
+                                  className="danger-button"
+                                  type="button"
+                                  onClick={() => deleteCustomScriptVoiceById(profile._id, profile.name)}
+                                  disabled={isDeletingScriptVoice}
+                                >
+                                  <Trash size={16} weight="bold" />
+                                  Delete
+                                </button>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="editor-note">No custom voices saved yet. Save one above, then load it here or from the Generate Script modal.</p>
+                    )}
+                  </div>
+                  <div className="voice-profile-actions is-footer">
+                    <button
+                      className="save-button"
+                      type="button"
+                      onClick={saveCustomScriptVoice}
+                      disabled={isSavingScriptVoice}
+                    >
+                      <FloppyDisk size={17} weight="bold" />
+                      {isSavingScriptVoice ? "Saving" : "Save Voice"}
+                    </button>
+                    <button
+                      className="danger-button"
+                      type="button"
+                      onClick={deleteSelectedScriptVoice}
+                      disabled={!selectedScriptVoiceId.startsWith("custom:") || isDeletingScriptVoice}
+                    >
+                      <Trash size={17} weight="bold" />
+                      {isDeletingScriptVoice ? "Deleting" : "Delete Voice"}
+                    </button>
+                  </div>
+                </section>
+
                 <section className="settings-panel account-defaults-panel" aria-label="Default script settings">
                   <div className="api-settings-header">
                     <div>
@@ -3969,7 +3863,7 @@ function App() {
                     <div>
                       <p className="eyebrow">BYOK settings</p>
                       <h2>Bring your own keys.</h2>
-                      <p className="panel-copy">Save provider keys for AI scripts, Firecrawl scraping, narration, and video provider setup. Raw keys are encrypted in Convex and never shown again.</p>
+                      <p className="panel-copy">Save provider keys for AI scripts, Firecrawl scraping, and narration voice. Raw keys are encrypted in Convex and never shown again.</p>
                     </div>
                   </div>
                   <div className="byok-requirements" aria-label="Provider setup requirements">
@@ -3988,7 +3882,7 @@ function App() {
                     })}
                   </div>
                   <div className="api-key-status-list" aria-label="API key status">
-                    {(apiKeyStatus?.keys ?? []).map((key) => (
+                    {activeApiKeyStatuses.map((key) => (
                       <span className={key.isConfigured ? "api-key-chip is-configured" : "api-key-chip"} key={key.service}>
                         {API_KEY_SERVICE_OPTIONS.find((option) => option.value === key.service)?.label ?? key.service}
                         {key.isConfigured ? " saved" : " missing"}
@@ -4002,6 +3896,7 @@ function App() {
                         ariaLabel="API key service"
                         value={apiKeyService}
                         options={API_KEY_SERVICE_OPTIONS}
+                        placement="up"
                         onChange={(value) => {
                           setApiKeyService(value);
                           const saved = apiKeyStatus?.keys.find((key) => key.service === value);
@@ -4022,18 +3917,7 @@ function App() {
                         placeholder="Paste key to save or replace"
                       />
                     </label>
-                    {apiKeyService === "mux" || apiKeyService === "r2" ? (
-                      <label className="field-control" htmlFor="api-key-model">
-                        <span>{API_KEY_HELP[apiKeyService].modelLabel}</span>
-                        <input
-                          id="api-key-model"
-                          type="text"
-                          value={apiKeyModel}
-                          onChange={(event) => setApiKeyModel(event.target.value)}
-                          placeholder={API_KEY_HELP[apiKeyService].modelPlaceholder}
-                        />
-                      </label>
-                    ) : MODEL_KEY_SERVICES.has(apiKeyService) ? (
+                    {MODEL_KEY_SERVICES.has(apiKeyService) ? (
                       <div className="field-control">
                         <span>{API_KEY_HELP[apiKeyService].modelLabel}</span>
                         <CustomSelect
@@ -4061,7 +3945,7 @@ function App() {
                             type="text"
                             value={apiKeySiteUrl}
                             onChange={(event) => setApiKeySiteUrl(event.target.value)}
-                            placeholder={apiKeyService === "mux" ? "Mux webhook signing secret" : apiKeyService === "r2" ? "Cloudflare account ID" : "https://www.promptdeck.app"}
+                            placeholder="https://www.promptdeck.app"
                           />
                         </label>
                         <label className="field-control" htmlFor="api-key-app-name">
@@ -4071,7 +3955,7 @@ function App() {
                             type="text"
                             value={apiKeyAppName}
                             onChange={(event) => setApiKeyAppName(event.target.value)}
-                            placeholder={apiKeyService === "mux" ? "stream.mux.com" : apiKeyService === "r2" ? "promptdeck-video-artifacts" : "PromptDeck"}
+                            placeholder="PromptDeck"
                           />
                         </label>
                       </>
@@ -4087,6 +3971,42 @@ function App() {
                   </div>
                   {apiKeyMessage ? <p className="library-message">{apiKeyMessage}</p> : null}
                 </div>
+
+                <section className="account-profile-panel account-access-panel" aria-label="Account access">
+                  <div>
+                    <p className="eyebrow">Account access</p>
+                    <h2>Sign out or delete account.</h2>
+                  </div>
+                  <p className="modal-copy">
+                    This account owns your saved scripts, folders, Build items, custom Script Voice Profiles, and encrypted BYOK settings.
+                  </p>
+                  {accountMessage ? <p className="library-message">{accountMessage}</p> : null}
+                  {isDeleteAccountConfirmOpen ? (
+                    <div className="account-delete-confirm" role="alert" aria-label="Delete account confirmation">
+                      <p>Delete this account and its saved PromptDeck data? This removes scripts, folders, Build items, custom voices, saved keys, and profile data.</p>
+                      <div className="modal-actions">
+                        <button className="save-button" type="button" onClick={() => setIsDeleteAccountConfirmOpen(false)} disabled={isDeletingAccount}>
+                          Cancel
+                        </button>
+                        <button className="danger-button" type="button" onClick={deleteSignedInAccount} disabled={isDeletingAccount}>
+                          <Trash size={17} weight="bold" />
+                          {isDeletingAccount ? "Deleting" : "Delete account"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="modal-actions">
+                      <button className="save-button" type="button" onClick={() => void signOutFromAccount()}>
+                        <SignOut size={17} weight="bold" />
+                        Sign out
+                      </button>
+                      <button className="danger-button" type="button" onClick={() => setIsDeleteAccountConfirmOpen(true)}>
+                        <Trash size={17} weight="bold" />
+                        Delete account
+                      </button>
+                    </div>
+                  )}
+                </section>
               </>
             ) : (
               <section className="account-profile-panel" aria-label="Signed out account">
@@ -4122,51 +4042,6 @@ function App() {
                 ))}
               </div>
             </section>
-            <section className="settings-panel video-build-panel" aria-label="Video build workflow">
-              <div className="api-settings-header">
-                <div>
-                  <p className="eyebrow">Video setup</p>
-                  <h2>Plan links, docs, scripts, and prompts for video.</h2>
-                  <p className="panel-copy">Current video tools create planning artifacts only. Real video output requires render workers, dedicated video job tables, R2 artifact storage, and Mux delivery before any render controls should exist. Configure BYOK provider details in Account.</p>
-                </div>
-                <button
-                  className="save-button has-tooltip"
-                  type="button"
-                  onClick={() => {
-                    if (!requireLogin("Sign in with GitHub to use video build workflows and save video provider keys.")) {
-                      return;
-                    }
-                    setActiveTab("account");
-                    setApiKeyMessage("Video setup needs R2, Mux, provider keys, render workers, and dedicated job tables before real rendering is available.");
-                  }}
-                  title="Open Account video setup"
-                  data-tooltip="Account setup"
-                >
-                  <Article size={17} weight="bold" />
-                  Account Setup
-                </button>
-              </div>
-              <div className="docs-grid">
-                {VIDEO_WORKFLOW_STEPS.map(([title, copy]) => (
-                  <article className="docs-card" key={title}>
-                    <h3>{title}</h3>
-                    <p>{copy}</p>
-                  </article>
-                ))}
-              </div>
-              <div className="video-provider-table" aria-label="Recommended video providers">
-                <div className="video-provider-row is-header">
-                  <span>Layer</span>
-                  <span>Best use</span>
-                </div>
-                {VIDEO_PROVIDER_GUIDE.map(([name, copy]) => (
-                  <div className="video-provider-row" key={name}>
-                    <span>{name}</span>
-                    <span>{copy}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
             <section className="settings-panel about-shortcuts-panel" aria-label="About and keyboard shortcuts">
               <div>
                 <p className="eyebrow">About and shortcuts</p>
@@ -4187,7 +4062,7 @@ function App() {
                 <h2>About</h2>
               </div>
               <p className="about-copy">
-                PromptDeck is an open source browser teleprompter for writing, organizing, generating, planning, and reading scripts with fewer distractions.
+                PromptDeck is an open source browser teleprompter for writing, organizing, generating, and reading scripts with fewer distractions.
               </p>
               <p className="about-copy">
                 Source code:{" "}
@@ -4227,6 +4102,33 @@ function App() {
                   docs.convex.dev/ai/using-codex
                 </a>
               </p>
+              <div className="stack-showcase" aria-label="PromptDeck stack and BYOK options">
+                <div className="stack-showcase-header">
+                  <div>
+                    <p className="eyebrow">Stack snapshot</p>
+                    <h3>Browser-first scripts, private data, bring-your-own keys.</h3>
+                  </div>
+                  <span>BYOK ready</span>
+                </div>
+                <div className="stack-layer-grid">
+                  {STACK_SHOWCASE.map((item) => (
+                    <article className="stack-layer-card" key={item.label}>
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                      <p>{item.copy}</p>
+                    </article>
+                  ))}
+                </div>
+                <div className="stack-byok-strip" aria-label="Bring your own key options">
+                  <span className="stack-byok-label">BYOK</span>
+                  {STACK_BYOK_OPTIONS.map(([name, use]) => (
+                    <span className="stack-byok-pill" key={name}>
+                      <strong>{name}</strong>
+                      <small>{use}</small>
+                    </span>
+                  ))}
+                </div>
+              </div>
               <div className="about-table-wrap">
                 <table className="about-table">
                   <thead>
@@ -4250,14 +4152,11 @@ function App() {
                     </tr>
                     <tr>
                       <td>Convex components</td>
-                      <td>
-                        Active: <code>@convex-dev/static-hosting</code>. Planned for video workflows: Convex R2 and Mux components after workers and
-                        video job tables are added.
-                      </td>
+                      <td>Active: <code>@convex-dev/static-hosting</code>.</td>
                     </tr>
                     <tr>
                       <td>AI and media</td>
-                      <td>BYOK setup for OpenAI, Claude, OpenRouter, Firecrawl, ElevenLabs, Cloudflare R2, Mux, and HeyGen where configured by the user.</td>
+                      <td>BYOK setup for OpenAI, Claude, OpenRouter, Firecrawl, and ElevenLabs where configured by the user.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -4640,23 +4539,17 @@ function App() {
                   <h3>{selectedScriptVoice.name}</h3>
                 </div>
                 <p>{selectedScriptVoice.tone}</p>
+                <button
+                  className="tool-button voice-manage-button"
+                  type="button"
+                  onClick={() => {
+                    setIsAiGeneratorOpen(false);
+                    setActiveTab("account");
+                  }}
+                >
+                  Manage voices in Account
+                </button>
               </div>
-              <label className="field-control ai-modal-wide" htmlFor="ai-model">
-                <span>Model override</span>
-                <input
-                  id="ai-model"
-                  type="text"
-                  value={aiModelOverride}
-                  onChange={(event) => setAiModelOverride(event.target.value)}
-                  placeholder={
-                    (aiProvider !== "auto"
-                      ? aiProviderStatus?.providers.find((provider) => provider.provider === aiProvider)?.model
-                      : undefined) ??
-                    aiProviderStatus?.providers[0]?.model ??
-                    "Use configured model"
-                  }
-                />
-              </label>
               <label className="field-control ai-modal-wide" htmlFor="ai-instructions">
                 <span>Style notes</span>
                 <textarea
@@ -4667,134 +4560,6 @@ function App() {
                   placeholder="Example: Make it direct, practical, and easy to read on camera."
                 />
               </label>
-              <section className="voice-profile-editor ai-modal-wide" aria-label="Custom script voice profile editor">
-                <div className="voice-profile-header">
-                  <div>
-                    <p className="eyebrow">Custom script voice</p>
-                    <h3>Save a reusable writing tone</h3>
-                  </div>
-                  <div className="voice-profile-actions">
-                    <button className="tool-button" type="button" onClick={loadSelectedVoiceIntoForm}>
-                      Load Selected
-                    </button>
-                    <button className="tool-button" type="button" onClick={clearScriptVoiceForm}>
-                      Clear
-                    </button>
-                  </div>
-                </div>
-                <div className="voice-profile-grid">
-                  <label className="field-control" htmlFor="voice-profile-name">
-                    <span>Name</span>
-                    <input
-                      id="voice-profile-name"
-                      type="text"
-                      value={scriptVoiceForm.name}
-                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, name: event.target.value }))}
-                      placeholder="My founder voice"
-                    />
-                  </label>
-                  <label className="field-control" htmlFor="voice-profile-audience">
-                    <span>Audience</span>
-                    <input
-                      id="voice-profile-audience"
-                      type="text"
-                      value={scriptVoiceForm.audience}
-                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, audience: event.target.value }))}
-                      placeholder="Founders, creators, operators"
-                    />
-                  </label>
-                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-tone">
-                    <span>Tone</span>
-                    <textarea
-                      id="voice-profile-tone"
-                      className="modal-textarea is-compact"
-                      value={scriptVoiceForm.tone}
-                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, tone: event.target.value }))}
-                      placeholder="Direct, practical, strong point of view, no hype."
-                    />
-                  </label>
-                  <label className="field-control" htmlFor="voice-profile-pacing">
-                    <span>Pacing</span>
-                    <input
-                      id="voice-profile-pacing"
-                      type="text"
-                      value={scriptVoiceForm.pacing}
-                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, pacing: event.target.value }))}
-                      placeholder="Short spoken sentences"
-                    />
-                  </label>
-                  <div className="field-control">
-                    <span>Default length</span>
-                    <CustomSelect
-                      ariaLabel="Profile default length"
-                      value={scriptVoiceForm.defaultLength}
-                      options={AI_LENGTH_OPTIONS}
-                      onChange={(value) => setScriptVoiceForm((current) => ({ ...current, defaultLength: value }))}
-                    />
-                  </div>
-                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-banned">
-                    <span>Banned words</span>
-                    <input
-                      id="voice-profile-banned"
-                      type="text"
-                      value={scriptVoiceForm.bannedWords}
-                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, bannedWords: event.target.value }))}
-                      placeholder="No hype, no generic AI phrases"
-                    />
-                  </label>
-                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-preferred">
-                    <span>Preferred phrases</span>
-                    <input
-                      id="voice-profile-preferred"
-                      type="text"
-                      value={scriptVoiceForm.preferredPhrases}
-                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, preferredPhrases: event.target.value }))}
-                      placeholder="Use practical next steps and specific examples"
-                    />
-                  </label>
-                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-structure">
-                    <span>Structure</span>
-                    <input
-                      id="voice-profile-structure"
-                      type="text"
-                      value={scriptVoiceForm.structure}
-                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, structure: event.target.value }))}
-                      placeholder="Hook, context, recommendation, close"
-                    />
-                  </label>
-                  <label className="field-control ai-modal-wide" htmlFor="voice-profile-examples">
-                    <span>Examples / import markdown</span>
-                    <textarea
-                      id="voice-profile-examples"
-                      className="modal-textarea"
-                      value={scriptVoiceForm.examples}
-                      onChange={(event) => setScriptVoiceForm((current) => ({ ...current, examples: event.target.value }))}
-                      placeholder="Paste sample lines, markdown notes, or a style guide here."
-                    />
-                  </label>
-                </div>
-                {scriptVoiceMessage ? <p className="library-message modal-message">{scriptVoiceMessage}</p> : null}
-                <div className="voice-profile-actions is-footer">
-                  <button
-                    className="save-button"
-                    type="button"
-                    onClick={saveCustomScriptVoice}
-                    disabled={isSavingScriptVoice}
-                  >
-                    <FloppyDisk size={17} weight="bold" />
-                    {isSavingScriptVoice ? "Saving" : "Save Voice"}
-                  </button>
-                  <button
-                    className="danger-button"
-                    type="button"
-                    onClick={deleteSelectedScriptVoice}
-                    disabled={!selectedScriptVoiceId.startsWith("custom:") || isDeletingScriptVoice}
-                  >
-                    <Trash size={17} weight="bold" />
-                    {isDeletingScriptVoice ? "Deleting" : "Delete Voice"}
-                  </button>
-                </div>
-              </section>
             </div>
             {generatedScriptResult ? (
               <section className="generated-script-review ai-modal-wide" aria-label="Generated script review">
@@ -4830,7 +4595,7 @@ function App() {
                 Cancel
               </button>
               <button className="save-button is-primary-action" type="button" onClick={generateScriptFromAi} disabled={isGeneratingScript}>
-                <Sparkle size={17} weight="bold" />
+                {isGeneratingScript ? <span className="agent-spinner" aria-hidden="true" /> : <Sparkle size={17} weight="bold" />}
                 {isGeneratingScript ? "Generating" : "Generate"}
               </button>
             </div>

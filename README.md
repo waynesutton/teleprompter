@@ -2,7 +2,7 @@
 
 PromptDeck is an open source browser teleprompter for writing, organizing, generating, and reading scripts.
 
-It is built for one person recording a talk, product update, tutorial, or video script who wants the script editor and the live prompter in the same app.
+It is built for one person recording a talk, product update, tutorial, or camera-ready script who wants the script editor and the live prompter in the same app.
 
 ## Features
 
@@ -13,14 +13,13 @@ It is built for one person recording a talk, product update, tutorial, or video 
 - Per-user script library with folders, save, load, and delete after GitHub login.
 - Keyboard shortcuts for playback, tab switching, sizing, speed, pages, mini view, RSVP, About, undo, counter visibility, and control-bar visibility.
 - Optional AI script generator using OpenAI, Claude, OpenRouter, and Firecrawl URL context.
-- Built-in Script Voice Profiles for AI generation: Teleprompter Natural, Founder Update, YouTube Intro, Investor Pitch, Educator, and High-Energy Creator.
+- Built-in Script Voice Profiles for AI generation: Teleprompter Natural, Founder Update, YouTube Intro, Investor Pitch, Educator, High-Energy Creator, DevRel, and Viral Video.
 - GitHub login with per-user saved scripts, folders, default settings, API keys, and custom Script Voice Profiles.
 - Bring-your-own-key AI setup for OpenAI, Claude, OpenRouter, Firecrawl, and ElevenLabs.
-- Logged-in Build workspace for saving script, video, or combined project items with edit, archive, restore, and delete controls.
-- Logged-in Video Project Builder with transcript reading view, edit strategy, EDL JSON, subtitle style, render checklist, output format, and persistent project memory.
+- Logged-in Build workspace for generating, saving, editing, archiving, restoring, and deleting script Build items.
 - Custom Script Voice Profiles saved per user in Convex with audience, tone, pacing, banned words, preferred phrases, examples, structure, and default length.
 - Optional ElevenLabs voice setup gate for narration features.
-- About docs, shortcut reference, video workflow notes, and open source feature table.
+- About docs, shortcut reference, and open source feature table.
 - PromptDeck-styled UI with Phosphor Icons and accessible font options.
 - Convex static hosting for serving the built Vite app.
 
@@ -30,9 +29,9 @@ Use **Tab 2 Script** to write, paste, save, load, format, preview, or generate a
 
 Use **Tab 1 Prompter** to read it live. Scroll mode behaves like a standard teleprompter. RSVP mode shows one word at a time with a red pivot letter. The mini view opens a compact synced popup for recording setups where the full app should stay out of the way.
 
-Use **Build** to generate scripts, save reusable Build items, and draft video projects from links, docs, scripts, or prompts. Build requires GitHub login for saving. Drafting from pasted script text does not need an AI key after login, but URL context needs Firecrawl, AI-assisted strategy/EDL needs OpenAI, Claude, or OpenRouter, transcription needs a speech-to-text provider, and final video rendering needs an external worker/provider pipeline.
+Use **Build** to generate scripts and save reusable script Build items from links, docs, scripts, notes, or prompts. Build requires GitHub login for saving. URL context needs Firecrawl, and AI generation needs OpenAI, Claude, or OpenRouter.
 
-Use **About** for app docs, keyboard shortcuts, video workflow docs, and the open source feature table.
+Use **About** for app docs, keyboard shortcuts, and the open source feature table.
 
 Use **Account** after GitHub login to manage profile actions, default script settings, BYOK provider keys, and custom setup.
 
@@ -51,9 +50,9 @@ They affect tone, pacing, audience, structure, preferred phrases, banned words, 
 - React 19
 - Vite 7
 - TypeScript
-- Convex
-- Convex Auth
-- `@convex-dev/static-hosting`
+- [Convex](https://www.convex.dev/)
+- [Convex Auth](https://docs.convex.dev/auth/convex-auth)
+- [`@convex-dev/static-hosting`](https://www.convex.dev/components/static-hosting)
 - Phosphor Icons
 - Fontsource fonts
 - ESLint
@@ -62,9 +61,19 @@ They affect tone, pacing, audience, structure, preferred phrases, banned words, 
 
 | Component | Use |
 | --- | --- |
-| `@convex-dev/static-hosting` | Serves the built Vite app from Convex storage. |
+| [`@convex-dev/static-hosting`](https://www.convex.dev/components/static-hosting) | Serves the built Vite app from Convex storage. |
 
-The app also uses regular Convex functions for per-user prompt state, saved scripts, custom Script Voice Profiles, encrypted BYOK setup, AI generation, RSVP rewriting, and voice setup checks.
+See the [Convex Components directory](https://www.convex.dev/components) for the component catalog.
+
+PromptDeck also uses regular Convex app code for private script data, user settings, BYOK setup, AI generation, RSVP rewriting, and voice setup checks.
+
+| Convex area | How PromptDeck uses it | Docs |
+| --- | --- | --- |
+| Convex backend | Queries, mutations, actions, schema validation, and generated TypeScript APIs. | [Functions](https://docs.convex.dev/functions), [schemas](https://docs.convex.dev/database/schemas), [TypeScript](https://docs.convex.dev/understanding/best-practices/typescript) |
+| Convex Auth | GitHub login for private scripts, folders, Build items, custom voices, defaults, and BYOK settings. | [Convex Auth](https://docs.convex.dev/auth/convex-auth) |
+| Convex database | Per-user prompt state, saved scripts, folders, Build items, custom Script Voice Profiles, prompt settings, and encrypted key records. | [Database](https://docs.convex.dev/database) |
+| Convex actions | Server-side AI provider calls, Firecrawl URL context, RSVP rewrite, and ElevenLabs setup checks. | [Actions](https://docs.convex.dev/functions/actions) |
+| Convex static hosting | Production and development uploads for the built Vite app. | [Static hosting component](https://www.convex.dev/components/static-hosting) |
 
 ## Getting started
 
@@ -115,7 +124,7 @@ Firecrawl
 ElevenLabs
 ```
 
-The app works without login for local paste/type/read workflows. Saving, loading, Build items, Video Project Builder drafts, AI, Firecrawl, voice setup, defaults, and custom voice profiles require GitHub login.
+The app works without login for local paste/type/read workflows. Saving, loading, Build items, AI, Firecrawl, voice setup, defaults, and custom voice profiles require GitHub login.
 
 ## Scripts
 
