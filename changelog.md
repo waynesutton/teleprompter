@@ -152,6 +152,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Filtered Account BYOK status chips and counts to the active script and narration services (2026-06-15 05:40 UTC).
 - Changed app links to use PromptDeck control styling instead of browser-default link styling (2026-06-15 05:56 UTC).
 - Removed the decorative gradient from the About Stack snapshot panel (2026-06-15 05:56 UTC).
+- Changed the signed-out Build generator button to read `Log in to use` while keeping the existing login-required modal on click (2026-06-15 06:33 UTC).
 
 ### Fixed
 

@@ -3478,12 +3478,12 @@ function App() {
                   className="save-button has-tooltip is-primary-action"
                   type="button"
                   onClick={openAiGenerator}
-                  disabled={!buildGeneratorSource.trim() || isCheckingAiSetup || isGeneratingScript}
-                  title="Generate a script from the Build source"
-                  data-tooltip="Generate script"
+                  disabled={(isAuthenticated && !buildGeneratorSource.trim()) || isCheckingAiSetup || isGeneratingScript}
+                  title={isAuthenticated ? "Generate a script from the Build source" : "Log in to use script generation"}
+                  data-tooltip={isAuthenticated ? "Generate script" : "Log in to use"}
                 >
                   <Sparkle size={17} weight="bold" />
-                  {isCheckingAiSetup ? "Checking" : "Generate Script"}
+                  {isCheckingAiSetup ? "Checking" : isAuthenticated ? "Generate Script" : "Log in to use"}
                 </button>
               </div>
             </section>
