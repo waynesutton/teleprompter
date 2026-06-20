@@ -129,4 +129,34 @@ export default defineSchema({
     .index("by_ownerId_and_status_and_updatedAt", ["ownerId", "status", "updatedAt"])
     .index("by_ownerId_and_kind_and_status", ["ownerId", "kind", "status"])
     .index("by_ownerId_and_updatedAt", ["ownerId", "updatedAt"]),
+  videoJobs: defineTable({
+    ownerId: v.id("users"),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("authoring"),
+      v.literal("authored"),
+      v.literal("rendering"),
+      v.literal("done"),
+      v.literal("failed"),
+    ),
+    sourceType: v.union(v.literal("prompt"), v.literal("url"), v.literal("script"), v.literal("mixed")),
+    title: v.string(),
+    prompt: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    scriptText: v.optional(v.string()),
+    designInstructions: v.optional(v.string()),
+    designUrl: v.optional(v.string()),
+    voiceProfileId: v.optional(v.string()),
+    voiceProfileName: v.optional(v.string()),
+    aspectRatio: v.union(v.literal("16:9"), v.literal("9:16"), v.literal("1:1")),
+    durationSeconds: v.number(),
+    quality: v.union(v.literal("draft"), v.literal("standard"), v.literal("high")),
+    progress: v.number(),
+    message: v.optional(v.string()),
+    outputUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_ownerId_and_updatedAt", ["ownerId", "updatedAt"])
+    .index("by_ownerId_and_status_and_updatedAt", ["ownerId", "status", "updatedAt"]),
 });

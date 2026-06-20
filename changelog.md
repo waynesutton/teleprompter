@@ -82,6 +82,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added an Account saved voice library so users can load and delete their custom Script Voice Profiles (2026-06-15 05:16 UTC).
 - Added browser-local draft, title, folder, and prompter settings persistence for signed-out users (2026-06-15 06:18 UTC).
 - Added authenticated current prompt persistence for signed-in users (2026-06-15 06:18 UTC).
+- Added an explicit Script library `Save As` action for intentional copies and variants, with create-only title/folder conflict handling (2026-06-15 18:18 UTC).
+- Added a logged-in Video tab that queues private HyperFrames video jobs from prompts, URLs, scripts, and design markdown with Script Voice Profile tone selection (2026-06-19 22:16 UTC).
+- Added a Convex `videoJobs` table and authenticated create/list functions for per-user video job tracking (2026-06-19 22:16 UTC).
+- Added HeyGen / HyperFrames to Account BYOK settings so every user can bring their own video rendering key (2026-06-20 00:50 UTC).
 
 ### Changed
 
@@ -115,15 +119,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Adjusted Fit-to-window sizing to measure with the fit layout instead of the teleprompter exit padding.
 - Updated AI script generation prompts to apply the selected Script Voice Profile while keeping ElevenLabs narration voice separate.
 - Refreshed the README with current features, app workflow, optional AI/voice setup, and public metadata details.
+- Changed Video job creation to require the signed-in user’s own HeyGen / HyperFrames key, plus one AI provider key and Firecrawl for URL context (2026-06-20 00:50 UTC).
+- Updated the default first-run PromptDeck script to mention the agent AI script workflow and Video job flow without changing saved user scripts (2026-06-20 03:45 UTC).
+- Changed the default Prompter reading guide setting to off and labeled Video job creation as Beta (2026-06-20 04:35 UTC).
 - Changed AI, Firecrawl, and ElevenLabs setup from deployment-wide environment keys to per-user keys saved after GitHub login.
 - Updated README and Tab 3 docs with the mini view, auth, and BYOK workflow details.
+- Updated tab switching so `Command/Ctrl + 4` opens Video and `Command/Ctrl + 5` opens About (2026-06-19 22:16 UTC).
+- Updated account deletion to remove user-owned video jobs along with the rest of the signed-in user's PromptDeck data (2026-06-19 22:16 UTC).
 - Moved the mini view launcher beside the Tab 1 hide-bar control, shrank the mini popup controls, and removed the mini footer strip.
 - Converted Mini View from a browser popup to a true in-app modal so it has no browser address/download chrome or fake window dots.
 - Moved GitHub auth into the bottom tab rail as a neutral tab-sized account control with green hover/focus treatment.
 - Made Mini View open as a smaller movable desktop panel with drag positioning, bottom-right resizing, and viewport clamping.
 - Shortened the bottom rail labels to Prompter, Script, Help, and Sign in.
 - Moved Script generator and BYOK settings out of Script and into Build.
-- Updated tab switching shortcuts so `Command/Ctrl + 3` opens Build and `Command/Ctrl + 4` opens Help.
+- Updated tab switching shortcuts so `Command/Ctrl + 3` opens Build, `Command/Ctrl + 4` opens Video, and `Command/Ctrl + 5` opens About.
 - Expanded the Build tab from setup-only planning into a content workspace for script drafts.
 - Clarified that saving scripts and Build items requires GitHub login.
 - Updated PromptDeck metadata, sitemap, robots policy, Auth setup docs, and custom domain docs to use `https://www.promptdeck.app/`.
@@ -153,6 +162,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed app links to use PromptDeck control styling instead of browser-default link styling (2026-06-15 05:56 UTC).
 - Removed the decorative gradient from the About Stack snapshot panel (2026-06-15 05:56 UTC).
 - Changed the signed-out Build generator button to read `Log in to use` while keeping the existing login-required modal on click (2026-06-15 06:33 UTC).
+- Changed the Generate Script modal footer so successful results use `Close` and `Regenerate`, failed generation uses `Try Again`, and closing an unused result asks for confirmation (2026-06-15 17:03 UTC).
+- Moved Script tab save/export actions into Your library, kept New Script as the only header action, and added title/folder overwrite guardrails for saved scripts (2026-06-15 18:01 UTC).
 
 ### Fixed
 

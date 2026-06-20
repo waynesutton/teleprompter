@@ -11,6 +11,7 @@ type DeletableDoc = {
     | Id<"userApiKeys">
     | Id<"aiPromptSettings">
     | Id<"buildItems">
+    | Id<"videoJobs">
     | Id<"authAccounts">
     | Id<"authSessions">
     | Id<"authRefreshTokens">
@@ -84,6 +85,10 @@ export const deleteCurrentAccount = mutation({
       .query("buildItems")
       .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", ownerId))
       .collect();
+    const videoJobs = await ctx.db
+      .query("videoJobs")
+      .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", ownerId))
+      .collect();
     const authAccounts = await ctx.db
       .query("authAccounts")
       .withIndex("userIdAndProvider", (q) => q.eq("userId", ownerId))
@@ -113,7 +118,7 @@ export const deleteCurrentAccount = mutation({
       deletedCount += refreshTokens.length;
     }
 
-    for (const group of [prompts, defaultSettings, savedScripts, scriptVoiceProfiles, userApiKeys, aiPromptSettings, buildItems, authAccounts, authSessions]) {
+    for (const group of [prompts, defaultSettings, savedScripts, scriptVoiceProfiles, userApiKeys, aiPromptSettings, buildItems, videoJobs, authAccounts, authSessions]) {
       await deleteDocs(ctx, group);
       deletedCount += group.length;
     }

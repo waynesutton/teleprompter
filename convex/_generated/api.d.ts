@@ -22,6 +22,7 @@ import type * as staticHosting from "../staticHosting.js";
 import type * as teleprompter from "../teleprompter.js";
 import type * as userApiKeys from "../userApiKeys.js";
 import type * as users from "../users.js";
+import type * as videoJobs from "../videoJobs.js";
 import type * as voice from "../voice.js";
 
 import type {
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   teleprompter: typeof teleprompter;
   userApiKeys: typeof userApiKeys;
   users: typeof users;
+  videoJobs: typeof videoJobs;
   voice: typeof voice;
 }>;
 

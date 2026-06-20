@@ -15,8 +15,9 @@ It is built for one person recording a talk, product update, tutorial, or camera
 - Optional AI script generator using OpenAI, Claude, OpenRouter, and Firecrawl URL context.
 - Built-in Script Voice Profiles for AI generation: Teleprompter Natural, Founder Update, YouTube Intro, Investor Pitch, Educator, High-Energy Creator, DevRel, and Viral Video.
 - GitHub login with per-user saved scripts, folders, default settings, API keys, and custom Script Voice Profiles.
-- Bring-your-own-key AI setup for OpenAI, Claude, OpenRouter, Firecrawl, and ElevenLabs.
+- Bring-your-own-key setup for OpenAI, Claude, OpenRouter, Firecrawl, ElevenLabs, and HeyGen / HyperFrames.
 - Logged-in Build workspace for generating, saving, editing, archiving, restoring, and deleting script Build items.
+- Logged-in Video workspace for queueing HyperFrames video jobs from prompts, URLs, scripts, and design markdown with each user’s own HeyGen key.
 - Custom Script Voice Profiles saved per user in Convex with audience, tone, pacing, banned words, preferred phrases, examples, structure, and default length.
 - Optional ElevenLabs voice setup gate for narration features.
 - About docs, shortcut reference, and open source feature table.
@@ -30,6 +31,8 @@ Use **Tab 2 Script** to write, paste, save, load, format, preview, or generate a
 Use **Tab 1 Prompter** to read it live. Scroll mode behaves like a standard teleprompter. RSVP mode shows one word at a time with a red pivot letter. The mini view opens a compact synced popup for recording setups where the full app should stay out of the way.
 
 Use **Build** to generate scripts and save reusable script Build items from links, docs, scripts, notes, or prompts. Build requires GitHub login for saving. URL context needs Firecrawl, and AI generation needs OpenAI, Claude, or OpenRouter.
+
+Use **Video** to queue a video job from a prompt, URL, script, or `design.md` instructions. PromptDeck stores the private job in Convex and uses the same Script Voice Profiles for tone. Video jobs require GitHub login, one AI provider key, and the signed-in user’s own HeyGen / HyperFrames key. URL or markdown-link context also needs Firecrawl.
 
 Use **About** for app docs, keyboard shortcuts, and the open source feature table.
 
@@ -65,14 +68,14 @@ They affect tone, pacing, audience, structure, preferred phrases, banned words, 
 
 See the [Convex Components directory](https://www.convex.dev/components) for the component catalog.
 
-PromptDeck also uses regular Convex app code for private script data, user settings, BYOK setup, AI generation, RSVP rewriting, and voice setup checks.
+PromptDeck also uses regular Convex app code for private script data, user settings, video jobs, BYOK setup, AI generation, RSVP rewriting, and voice/render setup checks.
 
 | Convex area | How PromptDeck uses it | Docs |
 | --- | --- | --- |
 | Convex backend | Queries, mutations, actions, schema validation, and generated TypeScript APIs. | [Functions](https://docs.convex.dev/functions), [schemas](https://docs.convex.dev/database/schemas), [TypeScript](https://docs.convex.dev/understanding/best-practices/typescript) |
-| Convex Auth | GitHub login for private scripts, folders, Build items, custom voices, defaults, and BYOK settings. | [Convex Auth](https://docs.convex.dev/auth/convex-auth) |
-| Convex database | Per-user prompt state, saved scripts, folders, Build items, custom Script Voice Profiles, prompt settings, and encrypted key records. | [Database](https://docs.convex.dev/database) |
-| Convex actions | Server-side AI provider calls, Firecrawl URL context, RSVP rewrite, and ElevenLabs setup checks. | [Actions](https://docs.convex.dev/functions/actions) |
+| Convex Auth | GitHub login for private scripts, folders, Build items, video jobs, custom voices, defaults, and BYOK settings. | [Convex Auth](https://docs.convex.dev/auth/convex-auth) |
+| Convex database | Per-user prompt state, saved scripts, folders, Build items, video jobs, custom Script Voice Profiles, prompt settings, and encrypted key records. | [Database](https://docs.convex.dev/database) |
+| Convex actions | Server-side AI provider calls, Firecrawl URL context, RSVP rewrite, and ElevenLabs/HeyGen setup checks. | [Actions](https://docs.convex.dev/functions/actions) |
 | Convex static hosting | Production and development uploads for the built Vite app. | [Static hosting component](https://www.convex.dev/components/static-hosting) |
 
 ## Getting started
@@ -122,9 +125,10 @@ Claude
 OpenRouter
 Firecrawl
 ElevenLabs
+HeyGen / HyperFrames
 ```
 
-The app works without login for local paste/type/read workflows. Saving, loading, Build items, AI, Firecrawl, voice setup, defaults, and custom voice profiles require GitHub login.
+The app works without login for local paste/type/read workflows. Saving, loading, Build items, Video jobs, AI, Firecrawl, voice/render setup, defaults, and custom voice profiles require GitHub login.
 
 ## Scripts
 

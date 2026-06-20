@@ -16,11 +16,19 @@ type PromptFont = (typeof PROMPT_FONTS)[number];
 const DEFAULT_PROMPT = {
   script: `Welcome to PromptDeck.
 
-PromptDeck helps you write, organize, and read scripts in the browser.
+PromptDeck helps you write, organize, generate, and read scripts in the browser.
+It also gives you an agent AI workflow for turning notes, links, docs, or prompts into scripts and video jobs.
 
-Start in Script when you need to draft.
-Move to Build when you want help turning notes, links, or ideas into a stronger script.
-Open Prompter when you are ready to read.
+Start in Script when you want to draft by hand.
+Move to Build when you want agent-style help turning notes, links, or ideas into a stronger script.
+Open Video when you want to turn a prompt, URL, script, or design notes into a video job.
+
+[pause]
+
+AI is optional.
+The prompter works without login.
+
+If you sign in, you can save scripts, create your own writing tones, add your own keys, and keep scripts or video jobs private to your account.
 
 [pause]
 
@@ -29,7 +37,7 @@ Use RSVP when you want one word at a time.
 Use Mini View when you need a compact recording window.
 
 The goal is simple:
-less setup, fewer distractions, better delivery.
+write the script, shape it with help when you need it, and deliver without distractions.
 
 Let's record.`,
   fontSize: 56,
@@ -37,7 +45,7 @@ Let's record.`,
   speedMultiplier: 1,
   scroll: 0,
   mirrored: false,
-  guide: true,
+  guide: false,
   fitToWindow: false,
   textColor: "white" as const,
   fontFamily: "system" as const,
@@ -263,6 +271,8 @@ export const saveSharedScript = mutation({
     title: v.string(),
     folder: v.optional(v.string()),
     script: v.string(),
+    expectedScriptId: v.optional(v.id("savedScripts")),
+    saveAs: v.optional(v.boolean()),
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
@@ -277,7 +287,7 @@ export const saveSharedScript = mutation({
     const script = args.script.trim();
 
     if (!title || !script) {
-      return null;
+      return { status: "invalid" as const };
     }
 
     const canonicalTitle = getCanonicalTitle(title);
@@ -289,6 +299,27 @@ export const saveSharedScript = mutation({
     const existing = matchingTitleScripts.find(
       (savedScript) => (savedScript.canonicalFolder ?? "") === canonicalFolder,
     );
+    const ownedScripts = args.expectedScriptId
+      ? await ctx.db
+          .query("savedScripts")
+          .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", ownerId))
+          .collect()
+      : [];
+    const expectedScript = args.expectedScriptId
+      ? ownedScripts.find((savedScript) => savedScript._id === args.expectedScriptId)
+      : null;
+
+    if (args.expectedScriptId && !expectedScript) {
+      return { status: "missing" as const };
+    }
+
+    if (args.saveAs && existing) {
+      return {
+        status: "conflict" as const,
+        existingTitle: existing.title,
+        existingFolder: existing.folder ?? "",
+      };
+    }
 
     if (
       existing &&
@@ -296,21 +327,30 @@ export const saveSharedScript = mutation({
       (existing.folder ?? "") === folder &&
       existing.script === script
     ) {
-      return existing._id;
+      return { status: "saved" as const, scriptId: existing._id };
     }
 
-    if (existing) {
-      await ctx.db.patch(existing._id, {
+    if (existing && existing._id !== args.expectedScriptId) {
+      return {
+        status: "conflict" as const,
+        existingTitle: existing.title,
+        existingFolder: existing.folder ?? "",
+      };
+    }
+
+    if (expectedScript) {
+      await ctx.db.patch(expectedScript._id, {
         title,
         folder: folder || undefined,
         canonicalFolder: canonicalFolder || undefined,
+        canonicalTitle,
         script,
         updatedAt: args.updatedAt,
       });
-      return existing._id;
+      return { status: "saved" as const, scriptId: expectedScript._id };
     }
 
-    return await ctx.db.insert("savedScripts", {
+    const scriptId = await ctx.db.insert("savedScripts", {
       ownerId,
       canonicalTitle,
       folder: folder || undefined,
@@ -320,6 +360,8 @@ export const saveSharedScript = mutation({
       createdAt: args.updatedAt,
       updatedAt: args.updatedAt,
     });
+
+    return { status: "created" as const, scriptId };
   },
 });
 
