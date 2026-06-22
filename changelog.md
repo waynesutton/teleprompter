@@ -86,10 +86,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Added a logged-in Video tab that queues private HyperFrames video jobs from prompts, URLs, scripts, and design markdown with Script Voice Profile tone selection (2026-06-19 22:16 UTC).
 - Added a Convex `videoJobs` table and authenticated create/list functions for per-user video job tracking (2026-06-19 22:16 UTC).
 - Added HeyGen / HyperFrames to Account BYOK settings so every user can bring their own video rendering key (2026-06-20 00:50 UTC).
+- Added a Script tab Clear Script action with a custom confirmation that clears editor text without deleting saved library rows (2026-06-20 05:18 UTC).
+- Added authenticated HyperFrames render start and status refresh actions that use each signed-in user's encrypted HeyGen BYOK key, store provider render ids, and save returned output URLs (2026-06-20 05:18 UTC).
+- Added the `@convex-dev/sandbox` component for Video tab execution using each signed-in user's Daytona Sandbox BYOK key (2026-06-20 05:56 UTC).
+- Added sandbox video job start, refresh, cancel, bounded execution logs, sandbox metadata, and artifact/output URL tracking (2026-06-20 05:56 UTC).
+- Added Convex storage artifact uploads for sandbox Video jobs and a `Download package` action for completed preview packages (2026-06-20 06:49 UTC).
+- Added real MP4 output for Video jobs by rendering sandbox scenes with ffmpeg, uploading `output.mp4` to Convex storage, and showing Preview Video and Download MP4 actions (2026-06-20 07:46 UTC).
 
 ### Changed
 
+- Updated the `.agents` deploydev, deployprod, and Convex static-hosting router skills so they are app-agnostic, script-first, and safe to copy into other Convex static-hosting apps (2026-06-22 00:24 UTC).
+- Disabled the active Video tab and sandbox/Daytona execution surface so PromptDeck returns to a script-focused app while preserving historical video job data for cleanup and future rollback (2026-06-21 04:42 UTC).
+- Updated Account BYOK setup, About docs, shortcuts, and README copy to remove current Daytona Sandbox and Video job requirements (2026-06-21 04:42 UTC).
+
 - Changed `deploy` and `deploy:static` to route through the production static upload script.
+
 - Changed production deploy documentation to separate full backend+static deploys from static-only uploads.
 - Updated GitHub Auth setup guidance to use the production Convex site instead of the dev site.
 - Renamed the Tab 2 header save action to `Save to Library` and connected it to the shared script library save flow.
@@ -122,6 +133,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Changed Video job creation to require the signed-in user’s own HeyGen / HyperFrames key, plus one AI provider key and Firecrawl for URL context (2026-06-20 00:50 UTC).
 - Updated the default first-run PromptDeck script to mention the agent AI script workflow and Video job flow without changing saved user scripts (2026-06-20 03:45 UTC).
 - Changed the default Prompter reading guide setting to off and labeled Video job creation as Beta (2026-06-20 04:35 UTC).
+- Changed Video job creation to queue and immediately attempt a HeyGen / HyperFrames render, with job-card Render, Refresh, and Open output controls (2026-06-20 05:18 UTC).
+- Changed Video job rendering from direct HeyGen / HyperFrames provider calls to fixed remote execution through the Convex sandbox component and Daytona Sandbox BYOK (2026-06-20 05:56 UTC).
+- Changed completed Video job copy so sandbox output is described as a preview package until the sandbox command produces a real MP4 render (2026-06-20 06:49 UTC).
+- Changed the Video creator UI from a dense form grid to a brief-first workspace with grouped Shape and Context panels, compact readiness chips, and a clearer action dock (2026-06-20 07:08 UTC).
+- Changed Video job output handling so `outputUrl` points to the rendered MP4 while the `.tar.gz` preview package remains a secondary debug artifact (2026-06-20 07:46 UTC).
 - Changed AI, Firecrawl, and ElevenLabs setup from deployment-wide environment keys to per-user keys saved after GitHub login.
 - Updated README and Tab 3 docs with the mini view, auth, and BYOK workflow details.
 - Updated tab switching so `Command/Ctrl + 4` opens Video and `Command/Ctrl + 5` opens About (2026-06-19 22:16 UTC).
@@ -171,5 +187,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
+- Removed the `@convex-dev/sandbox` component registration, local sandbox package dependency, and `convex/videoRender.ts` actions from the active app (2026-06-21 04:42 UTC).
 - Removed `lucide-react` after migrating icons to Phosphor.
 - Removed inactive planning panels, provider setup copy, setup docs, and BYOK options outside the script generation workflow (2026-06-15 05:16 UTC).

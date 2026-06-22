@@ -17,18 +17,17 @@ const DEFAULT_PROMPT = {
   script: `Welcome to PromptDeck.
 
 PromptDeck helps you write, organize, generate, and read scripts in the browser.
-It also gives you an agent AI workflow for turning notes, links, docs, or prompts into scripts and video jobs.
+It also gives you an agent AI workflow for turning notes, links, docs, or prompts into stronger scripts.
 
 Start in Script when you want to draft by hand.
 Move to Build when you want agent-style help turning notes, links, or ideas into a stronger script.
-Open Video when you want to turn a prompt, URL, script, or design notes into a video job.
 
 [pause]
 
 AI is optional.
 The prompter works without login.
 
-If you sign in, you can save scripts, create your own writing tones, add your own keys, and keep scripts or video jobs private to your account.
+If you sign in, you can save scripts, create your own writing tones, add your own keys, and keep scripts private to your account.
 
 [pause]
 

@@ -3,7 +3,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 
 type StoredUserApiKey = {
-  service: "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "r2" | "mux" | "heygen";
+  service: "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "r2" | "mux" | "heygen" | "daytona";
 };
 
 type VoiceStatusResult = {

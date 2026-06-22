@@ -8,7 +8,7 @@ import { v } from "convex/values";
 import { trimSkillContext } from "./promptTemplates";
 
 type StoredUserApiKey = {
-  service: "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "r2" | "mux" | "heygen";
+  service: "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "r2" | "mux" | "heygen" | "daytona";
   encryptedKey: string;
   iv: string;
   tag: string;

@@ -1,51 +1,75 @@
 ---
 name: deploydev
-description: Use when the user says /deploydev, deploy dev, upload dev static hosting, or asks to deploy this teleprompt app to the development Convex static-hosting target.
+description: Use when the user says /deploydev, deploy dev, upload dev static hosting, or asks to deploy the current app to its development Convex static-hosting target.
 ---
 
 # Deploy Dev
 
-Use this skill only for the development `@convex-dev/static-hosting` target.
+Use this skill for a development `@convex-dev/static-hosting` upload in the current repo.
 
 Source of truth:
 
 - Component repo: `https://github.com/get-convex/static-hosting`
 - Component docs: `https://www.convex.dev/components/static-hosting`
 
-## Target
+## Portable Assumptions
 
-| Intent | Public URL | Convex cloud URL | Command |
-| --- | --- | --- | --- |
-| `/deploydev` | `https://fearless-dolphin-422.convex.site/` | `https://fearless-dolphin-422.convex.cloud` | `npm run deploy:static:dev` |
-
-Keep the dev URL private. Do not publish it in SEO, Open Graph, Twitter card, sitemap, robots, or public README copy except where explicitly documenting dev/prod behavior.
+- The current repo is a Convex app that uses `@convex-dev/static-hosting`.
+- Prefer project scripts in `package.json` when present.
+- The common static hosting component name is `staticHosting`, but do not hard-code it if the repo defines another name.
+- Discover the component name from `convex/convex.config.ts` when needed by looking for `app.use(staticHosting, { name: "..." })`.
+- If no component name is configured, use `staticHosting`.
 
 ## Required Rules
 
 - Use this only when the user explicitly asks for dev.
 - Do not update public metadata to the dev URL.
 - Do not run `npm run build` separately before static upload. Static-hosting's `--build` flag injects the correct `VITE_CONVEX_URL`.
-- Do not deploy backend production functions from this workflow.
+- Do not deploy production backend functions from this workflow.
+- Do not assume a specific Convex deployment URL. Read the URL from command output.
 
 ## `/deploydev` Workflow
 
 1. Confirm the user asked for dev.
 
-2. Run:
+2. Inspect available scripts:
+
+   ```bash
+   npm run
+   ```
+
+3. Prefer the repo script when available:
 
    ```bash
    npm run deploy:static:dev
    ```
 
-3. Confirm deploy output includes:
+4. If no script exists, discover the component name and run the static-hosting upload directly:
 
-   ```text
-   VITE_CONVEX_URL=https://fearless-dolphin-422.convex.cloud
-   Deploying to development environment
-   Your app is now available at: https://fearless-dolphin-422.convex.site
+   ```bash
+   npx @convex-dev/static-hosting upload --build -c staticHosting --dev
    ```
 
-4. Report the dev URL and remind that it is not the public/canonical app.
+   Replace `staticHosting` with the configured component name if different.
+
+5. Confirm deploy output includes:
+
+   ```text
+   Deploying to development environment
+   Your app is now available at: <dev convex site URL>
+   ```
+
+6. Report the dev URL exactly as printed and remind that it is not the public/canonical app.
+
+## Troubleshooting
+
+- If the upload cannot find static-hosting functions, run the app's dev Convex workflow first, usually:
+
+  ```bash
+  npx convex dev --once
+  ```
+
+- If the shell cannot reach Convex because of sandboxed network restrictions, rerun the same command with the required network approval.
 
 ## When To Update Project Docs
 

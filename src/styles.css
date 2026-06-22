@@ -1587,24 +1587,153 @@ textarea {
 }
 
 .video-creator-panel {
+  gap: 18px;
   border-color: rgba(51, 231, 162, 0.3);
 }
 
-.video-form-grid {
+.video-creator-header {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--quiet-white);
+}
+
+.video-creator-header h2,
+.video-card-heading h3 {
+  margin: 0;
+  color: var(--promptdeck-primary);
+  font-family: "Inter Tight", Inter, ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.08;
+}
+
+.video-creator-header h2 {
+  margin-top: 6px;
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 780;
+}
+
+.video-readiness-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 560px;
+}
+
+.video-readiness-strip span {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid var(--quiet-white);
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--promptdeck-secondary);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.video-readiness-strip .is-ready {
+  border-color: rgba(51, 231, 162, 0.32);
+  background: rgba(51, 231, 162, 0.1);
+  color: var(--promptdeck-accent);
+}
+
+.video-creator-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.video-brief-card,
+.video-side-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  border: 1px solid var(--quiet-white);
+  border-radius: 14px;
+  background: var(--soft-black);
+}
+
+.video-brief-card {
+  padding: 16px;
+}
+
+.video-side-stack {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.video-side-card {
+  padding: 14px;
+}
+
+.video-card-heading {
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
 }
 
-.video-form-grid .is-wide {
+.video-card-heading > span {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(51, 231, 162, 0.24);
+  border-radius: 10px;
+  background: rgba(51, 231, 162, 0.1);
+  color: var(--promptdeck-accent);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.video-card-heading h3 {
+  font-size: 20px;
+  font-weight: 740;
+}
+
+.video-card-heading p {
+  margin: 5px 0 0;
+  color: var(--promptdeck-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.video-primary-prompt textarea {
+  min-height: 164px;
+}
+
+.video-script-input textarea {
+  min-height: 220px;
+}
+
+.video-design-input textarea {
+  min-height: 128px;
+}
+
+.video-compact-grid,
+.video-context-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.video-full-row {
   grid-column: 1 / -1;
 }
 
-.video-form-grid .build-textarea-field {
-  grid-column: span 2;
-}
-
-.video-form-grid input[type="file"] {
+.video-creator-panel input[type="file"] {
   width: 100%;
   min-height: 44px;
   padding: 10px;
@@ -1613,6 +1742,42 @@ textarea {
   background: var(--soft-black);
   color: var(--promptdeck-secondary);
   font: 700 12px/1.2 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.video-action-dock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--quiet-white);
+  border-radius: 14px;
+  background: rgba(7, 8, 10, 0.72);
+}
+
+.video-action-dock > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.video-action-dock strong {
+  color: var(--promptdeck-primary);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.video-action-dock span {
+  color: var(--promptdeck-secondary);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.video-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .video-setup-panel,
@@ -1733,6 +1898,20 @@ textarea {
   text-align: right;
 }
 
+.video-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.video-job-actions .save-button {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
 .video-job-status strong {
   color: var(--promptdeck-primary);
   font-family: "Inter Tight", Inter, ui-sans-serif, system-ui, sans-serif;
@@ -1744,6 +1923,7 @@ textarea {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
+  gap: 7px;
   justify-content: center;
   padding: 0 10px;
   border: 1px solid var(--control-border);
@@ -1752,6 +1932,52 @@ textarea {
   color: var(--promptdeck-primary);
   font-weight: 800;
   text-decoration: none;
+}
+
+.video-preview-player {
+  width: min(320px, 100%);
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--quiet-white);
+  border-radius: 10px;
+  background: #050607;
+}
+
+.video-artifact-note {
+  max-width: 280px;
+  color: var(--promptdeck-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.video-job-logs {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--quiet-white);
+  padding-top: 10px;
+}
+
+.video-job-logs summary {
+  cursor: pointer;
+  color: var(--promptdeck-secondary);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.video-job-logs pre {
+  max-height: 220px;
+  margin: 10px 0 0;
+  overflow: auto;
+  border: 1px solid var(--quiet-white);
+  border-radius: 10px;
+  background: var(--control);
+  color: var(--promptdeck-primary);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 12px;
+  white-space: pre-wrap;
 }
 
 textarea:focus {
@@ -3122,18 +3348,28 @@ textarea:focus-visible {
   }
 
   .build-form-grid,
-  .video-form-grid,
   .build-form-grid .is-wide,
-  .video-form-grid .is-wide,
-  .video-form-grid .build-textarea-field,
   .build-textarea-field {
     grid-template-columns: 1fr;
     grid-column: span 1;
   }
 
-  .build-action-row {
+  .build-action-row,
+  .video-action-dock,
+  .video-action-buttons {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .video-creator-header,
+  .video-creator-layout,
+  .video-compact-grid,
+  .video-context-row {
+    grid-template-columns: 1fr;
+  }
+
+  .video-readiness-strip {
+    justify-content: flex-start;
   }
 
   .build-filter-control {

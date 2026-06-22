@@ -43,13 +43,12 @@ import {
   TextAlignCenter,
   Trash,
   UserCircle,
-  VideoCamera,
   X,
 } from "@phosphor-icons/react";
 import { api } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
 
-type PromptTab = "prompter" | "script" | "build" | "video" | "help" | "account";
+type PromptTab = "prompter" | "script" | "build" | "help" | "account";
 type TextColor = "white" | "red" | "yellow" | "grey" | "darkgrey";
 type PromptFont = "system" | "promptdeck" | "lexend" | "opendyslexic";
 type LayoutMode = "left" | "centered";
@@ -115,8 +114,8 @@ type SkillImportResult =
       message: string;
     };
 
-type UserApiKeyService = "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs" | "heygen";
-type StoredApiKeyService = UserApiKeyService | "r2" | "mux";
+type UserApiKeyService = "openai" | "claude" | "openrouter" | "firecrawl" | "elevenlabs";
+type StoredApiKeyService = UserApiKeyService | "r2" | "mux" | "heygen";
 
 type UserApiKeyStatus = {
   isAuthenticated: boolean;
@@ -153,32 +152,6 @@ type BuildItem = {
   updatedAt: number;
   archivedAt?: number;
 };
-type VideoSourceType = "prompt" | "url" | "script" | "mixed";
-type VideoAspectRatio = "16:9" | "9:16" | "1:1";
-type VideoQuality = "draft" | "standard" | "high";
-type VideoJobStatus = "queued" | "authoring" | "authored" | "rendering" | "done" | "failed";
-type VideoJob = {
-  _id: Id<"videoJobs">;
-  status: VideoJobStatus;
-  sourceType: VideoSourceType;
-  title: string;
-  prompt?: string;
-  sourceUrl?: string;
-  scriptText?: string;
-  designInstructions?: string;
-  designUrl?: string;
-  voiceProfileId?: string;
-  voiceProfileName?: string;
-  aspectRatio: VideoAspectRatio;
-  durationSeconds: number;
-  quality: VideoQuality;
-  progress: number;
-  message?: string;
-  outputUrl?: string;
-  createdAt: number;
-  updatedAt: number;
-};
-
 type PromptSettings = {
   fontSize: number;
   speed: number;
@@ -220,18 +193,17 @@ type MiniViewInteraction = {
 const DEFAULT_SCRIPT = `Welcome to PromptDeck.
 
 PromptDeck helps you write, organize, generate, and read scripts in the browser.
-It also gives you an agent AI workflow for turning notes, links, docs, or prompts into scripts and video jobs.
+It also gives you an agent AI workflow for turning notes, links, docs, or prompts into stronger scripts.
 
 Start in Script when you want to draft by hand.
 Move to Build when you want agent-style help turning notes, links, or ideas into a stronger script.
-Open Video when you want to turn a prompt, URL, script, or design notes into a video job.
 
 [pause]
 
 AI is optional.
 The prompter works without login.
 
-If you sign in, you can save scripts, create your own writing tones, add your own keys, and keep scripts or video jobs private to your account.
+If you sign in, you can save scripts, create your own writing tones, add your own keys, and keep scripts private to your account.
 
 [pause]
 
@@ -336,7 +308,6 @@ const API_KEY_SERVICE_OPTIONS: Array<SelectOption<UserApiKeyService>> = [
   { value: "openrouter", label: "OpenRouter" },
   { value: "firecrawl", label: "Firecrawl" },
   { value: "elevenlabs", label: "ElevenLabs" },
-  { value: "heygen", label: "HeyGen / HyperFrames" },
 ];
 const API_MODEL_OPTIONS: Partial<Record<UserApiKeyService, Array<SelectOption<string>>>> = {
   openai: [
@@ -373,22 +344,6 @@ const BUILD_STATUS_OPTIONS: Array<SelectOption<BuildItemStatus | "all">> = [
   { value: "archived", label: "Archived" },
   { value: "all", label: "All" },
 ];
-const VIDEO_SOURCE_OPTIONS: Array<SelectOption<VideoSourceType>> = [
-  { value: "mixed", label: "Prompt + sources" },
-  { value: "prompt", label: "Prompt only" },
-  { value: "url", label: "URL" },
-  { value: "script", label: "Script" },
-];
-const VIDEO_ASPECT_OPTIONS: Array<SelectOption<VideoAspectRatio>> = [
-  { value: "16:9", label: "16:9 demo" },
-  { value: "9:16", label: "9:16 short" },
-  { value: "1:1", label: "1:1 square" },
-];
-const VIDEO_QUALITY_OPTIONS: Array<SelectOption<VideoQuality>> = [
-  { value: "draft", label: "Draft" },
-  { value: "standard", label: "Standard" },
-  { value: "high", label: "High" },
-];
 const EMPTY_BUILD_FORM = {
   kind: "script" as BuildItemKind,
   sourceType: "script" as BuildSourceType,
@@ -404,19 +359,6 @@ const EMPTY_BUILD_FORM = {
   projectMemory: "",
   outputFormat: "1920x1080 landscape, 30fps",
   notes: "",
-};
-const EMPTY_VIDEO_FORM = {
-  sourceType: "mixed" as VideoSourceType,
-  title: "",
-  prompt: "",
-  sourceUrl: "",
-  scriptText: "",
-  designInstructions: "",
-  designUrl: "",
-  voiceProfileId: "builtin-natural",
-  aspectRatio: "16:9" as VideoAspectRatio,
-  durationSeconds: 60,
-  quality: "draft" as VideoQuality,
 };
 const MODEL_KEY_SERVICES = new Set<UserApiKeyService>(["openai", "claude", "openrouter"]);
 const SITE_APP_KEY_SERVICES = new Set<UserApiKeyService>(["openrouter"]);
@@ -461,22 +403,13 @@ const API_KEY_HELP: Record<UserApiKeyService, { keyLabel: string; modelLabel: st
     appLabel: "App name",
     help: "Used for narration voice features when voice mode is enabled.",
   },
-  heygen: {
-    keyLabel: "API key",
-    modelLabel: "Model",
-    modelPlaceholder: "",
-    siteLabel: "Site URL",
-    appLabel: "App name",
-    help: "Used by Video jobs for HyperFrames cloud rendering with the user's own HeyGen key.",
-  },
 };
 const BYOK_REQUIREMENTS: Array<{ service: UserApiKeyService; label: string; required: string; use: string }> = [
-  { service: "openai", label: "OpenAI", required: "API key, optional model", use: "Generate scripts, RSVP rewrites, and video authoring prompts." },
-  { service: "claude", label: "Claude", required: "API key, optional model", use: "Generate scripts, RSVP rewrites, and video authoring prompts." },
-  { service: "openrouter", label: "OpenRouter", required: "API key, optional model, optional site URL/app name", use: "Route script and video authoring through OpenRouter. Use https://www.promptdeck.app as the site URL." },
+  { service: "openai", label: "OpenAI", required: "API key, optional model", use: "Generate scripts and RSVP rewrites." },
+  { service: "claude", label: "Claude", required: "API key, optional model", use: "Generate scripts and RSVP rewrites." },
+  { service: "openrouter", label: "OpenRouter", required: "API key, optional model, optional site URL/app name", use: "Route script generation through OpenRouter. Use https://www.promptdeck.app as the site URL." },
   { service: "firecrawl", label: "Firecrawl", required: "API key", use: "Scrape pasted URLs, markdown links, docs URLs, and design URLs before generation." },
   { service: "elevenlabs", label: "ElevenLabs", required: "API key", use: "Enable narration voice features when configured." },
-  { service: "heygen", label: "HeyGen / HyperFrames", required: "API key", use: "Render Video tab jobs through HyperFrames cloud using the user's own HeyGen key." },
 ];
 const STACK_SHOWCASE = [
   { label: "Frontend", value: "React + Vite", copy: "Fast browser scripts with TypeScript and Phosphor controls." },
@@ -490,23 +423,22 @@ const STACK_BYOK_OPTIONS = [
   ["OpenRouter", "Model routing"],
   ["Firecrawl", "URL context"],
   ["ElevenLabs", "Narration voice"],
-  ["HeyGen", "Video rendering"],
 ] as const;
 const ACTIVE_API_KEY_SERVICES = new Set<UserApiKeyService>(API_KEY_SERVICE_OPTIONS.map((option) => option.value));
 const PRIVACY_SECTIONS = [
   ["Overview", "PromptDeck is an open source browser teleprompter for writing, organizing, and reading scripts. We collect the minimum data needed to run the hosted service. You own your content. We do not sell your data."],
   ["Account data", "When you sign in with GitHub, PromptDeck stores the profile details GitHub shares with the app, such as your name, email when available, avatar, and authentication session records."],
-  ["Script, build, and video data", "If you save content after signing in, PromptDeck stores your scripts, folders, Build items, video jobs, custom Script Voice Profiles, default settings, and project notes in Convex under your user account."],
-  ["Bring your own keys", "If you save API keys for OpenAI, Claude, OpenRouter, Firecrawl, ElevenLabs, or HeyGen, the raw key is encrypted server-side before storage. The app only shows configured status later, not the raw key."],
+  ["Script and build data", "If you save content after signing in, PromptDeck stores your scripts, folders, Build items, custom Script Voice Profiles, default settings, and project notes in Convex under your user account."],
+  ["Bring your own keys", "If you save API keys for OpenAI, Claude, OpenRouter, Firecrawl, or ElevenLabs, the raw key is encrypted server-side before storage. The app only shows configured status later, not the raw key."],
   ["How data is used", "Your data is used to provide saved libraries, generation features, URL scraping, and narration setup. We do not train AI models on your saved scripts."],
   ["Third-party services", "PromptDeck uses Convex for backend storage and GitHub OAuth through Convex Auth for login. Your own provider keys are used only when you choose features that call those providers."],
-  ["Deleting data", "You can delete saved scripts and Build items from the app. Signed-in users can delete their account from Account, which removes PromptDeck-owned app data tied to that user, including video jobs."],
+  ["Deleting data", "You can delete saved scripts and Build items from the app. Signed-in users can delete their account from Account, which removes PromptDeck-owned app data tied to that user."],
   ["Contact", "For privacy questions, open an issue at github.com/waynesutton/teleprompter."],
 ] as const;
 const TERMS_SECTIONS = [
   ["Agreement", "By using PromptDeck at www.promptdeck.app, you agree to these terms for the hosted service. The source code is open source; these terms cover the hosted app."],
-  ["Service", "PromptDeck provides script writing, live prompting, local drafting, saved libraries for signed-in users, optional AI generation, optional URL scraping, optional narration setup, and optional video job creation."],
-  ["Your content", "You own the scripts, notes, prompts, Build items, video jobs, and settings you create. You grant PromptDeck permission to store, process, and display that content only to provide the service to you."],
+  ["Service", "PromptDeck provides script writing, live prompting, local drafting, saved libraries for signed-in users, optional AI generation, optional URL scraping, and optional narration setup."],
+  ["Your content", "You own the scripts, notes, prompts, Build items, and settings you create. You grant PromptDeck permission to store, process, and display that content only to provide the service to you."],
   ["Your responsibilities", "Do not use PromptDeck for illegal activity, malicious content, unauthorized access, or content you do not have the right to store or process."],
   ["Provider keys", "If you bring your own API keys, you are responsible for those provider accounts, usage, cost, and key rotation. Remove a key from Account if you no longer want PromptDeck to use it."],
   ["Availability", "PromptDeck is provided as-is and may change, pause, or stop at any time. Use it at your own risk, especially for live production workflows."],
@@ -639,7 +571,6 @@ const ABOUT_FEATURES = [
   ["Keyboard control", "Use shortcuts for playback, tabs, pages, sizing, About, and undo."],
   ["Mini view", "Open a synced popup prompter for a compact recording view while keeping keyboard controls active."],
   ["Build workspace", "Sign in to generate scripts with your saved prompt rules and save reusable script Build items."],
-  ["Video jobs", "Sign in to queue video jobs from prompts, URLs, scripts, and design markdown. Rendering uses your saved HeyGen / HyperFrames key."],
   ["Skill-supported scripts", "Import or paste skill guidance in Account so generated scripts can follow a specific writing system."],
   ["Optional tools", "AI script generation, Firecrawl URL context, and narration voice depend on your saved provider keys."],
   ["Open source", "The project is open source at github.com/waynesutton/teleprompter."],
@@ -650,7 +581,6 @@ const APP_DOCS = [
   ["Mini View", "Use the monitor icon on Tab 1 to open a compact movable prompter. It follows the active page, scroll/RSVP mode, playback state, and keyboard shortcuts."],
   ["Script", "Write or paste the source script, preview formatting, add page breaks, save scripts into folders, and export markdown."],
   ["Build", "Sign in to generate scripts from topics, notes, links, docs, or the current draft. URL scraping needs Firecrawl, and AI generation needs OpenAI, Claude, or OpenRouter."],
-  ["Video", "Sign in to queue a HyperFrames video job from a prompt, URL, script, or design markdown. Convex tracks the job, and rendering requires your saved HeyGen / HyperFrames key."],
   ["About", "Review shortcuts, read app docs, and check the open source feature list."],
   ["Script Voice Profiles", "Choose a writing tone for AI-generated scripts. Built-in profiles work immediately, and custom profiles can be saved, edited, deleted, or imported from notes."],
   ["Narration Voice", "Audio narration is separate from script writing tone. It only becomes usable when your ElevenLabs key is saved."],
@@ -665,8 +595,8 @@ const SHORTCUTS = [
   ["Command/Ctrl + 1", "Open Prompter"],
   ["Command/Ctrl + 2", "Open Script"],
   ["Command/Ctrl + 3", "Open Build"],
-  ["Command/Ctrl + 4", "Open Video"],
-  ["Command/Ctrl + 5", "Open About"],
+  ["Command/Ctrl + 4", "Open About"],
+  ["Command/Ctrl + 5", "Open Account"],
   ["Command/Ctrl + Z", "Undo the last script tool change on Tab 2"],
   ["M", "Open or focus the mini prompter view"],
   ["H or B", "Show or hide the Tab 1 control bar"],
@@ -993,7 +923,6 @@ function App() {
   const savedScriptVoiceProfilesQuery = useQuery(api.scriptVoices.list);
   const [buildStatusFilter, setBuildStatusFilter] = useState<BuildItemStatus | "all">("active");
   const buildItemsQuery = useQuery(api.buildItems.list, { status: "all" }) as BuildItem[] | undefined;
-  const videoJobsQuery = useQuery(api.videoJobs.list) as VideoJob[] | undefined;
   const viewer = useQuery(api.users.getViewer);
   const apiKeyStatus = useQuery(api.userApiKeys.getStatus) as UserApiKeyStatus | undefined;
   const aiPromptSettings = useQuery(api.aiPromptSettings.get) as AiPromptSettings | undefined;
@@ -1011,7 +940,6 @@ function App() {
   const saveBuildItem = useMutation(api.buildItems.save);
   const setBuildItemStatus = useMutation(api.buildItems.setStatus);
   const deleteBuildItem = useMutation(api.buildItems.remove);
-  const createVideoJob = useMutation(api.videoJobs.create);
   const removeUserApiKey = useMutation(api.userApiKeys.remove);
   const saveAiPromptSettings = useMutation(api.aiPromptSettings.save);
   const resetAiPromptSettings = useMutation(api.aiPromptSettings.reset);
@@ -1054,6 +982,7 @@ function App() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [isNewScriptDialogOpen, setIsNewScriptDialogOpen] = useState(false);
+  const [isClearScriptDialogOpen, setIsClearScriptDialogOpen] = useState(false);
   const [isScriptPreviewOpen, setIsScriptPreviewOpen] = useState(false);
   const [isAiGeneratorOpen, setIsAiGeneratorOpen] = useState(false);
   const [isAiSetupModalOpen, setIsAiSetupModalOpen] = useState(false);
@@ -1087,10 +1016,6 @@ function App() {
   const [isSavingBuildItem, setIsSavingBuildItem] = useState(false);
   const [isUpdatingBuildItem, setIsUpdatingBuildItem] = useState(false);
   const [buildPendingDeleteId, setBuildPendingDeleteId] = useState<Id<"buildItems"> | null>(null);
-  const [videoForm, setVideoForm] = useState(EMPTY_VIDEO_FORM);
-  const [videoMessage, setVideoMessage] = useState<string | null>(null);
-  const [isCreatingVideoJob, setIsCreatingVideoJob] = useState(false);
-  const [isVideoSetupOpen, setIsVideoSetupOpen] = useState(false);
   const [aiInstructions, setAiInstructions] = useState("");
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [generatedScriptResult, setGeneratedScriptResult] = useState<GeneratedScriptResult | null>(null);
@@ -1117,7 +1042,6 @@ function App() {
   const savedScripts = useMemo(() => savedScriptsQuery ?? [], [savedScriptsQuery]);
   const savedScriptVoiceProfiles = useMemo(() => savedScriptVoiceProfilesQuery ?? [], [savedScriptVoiceProfilesQuery]);
   const buildItems = useMemo(() => buildItemsQuery ?? [], [buildItemsQuery]);
-  const videoJobs = useMemo(() => videoJobsQuery ?? [], [videoJobsQuery]);
   const activeApiKeyStatuses = useMemo(
     () => (apiKeyStatus?.keys ?? []).filter((key) => ACTIVE_API_KEY_SERVICES.has(key.service as UserApiKeyService)),
     [apiKeyStatus],
@@ -1135,23 +1059,6 @@ function App() {
   );
   const activeBuildCount = useMemo(() => buildItems.filter((item) => item.status === "active").length, [buildItems]);
   const archivedBuildCount = useMemo(() => buildItems.filter((item) => item.status === "archived").length, [buildItems]);
-  const videoAiConfigured = useMemo(
-    () =>
-      Boolean(
-        apiKeyStatus?.keys.some(
-          (key) => key.isConfigured && (key.service === "openai" || key.service === "claude" || key.service === "openrouter"),
-        ),
-      ),
-    [apiKeyStatus],
-  );
-  const firecrawlConfigured = useMemo(
-    () => Boolean(apiKeyStatus?.keys.some((key) => key.service === "firecrawl" && key.isConfigured)),
-    [apiKeyStatus],
-  );
-  const heygenConfigured = useMemo(
-    () => Boolean(apiKeyStatus?.keys.some((key) => key.service === "heygen" && key.isConfigured)),
-    [apiKeyStatus],
-  );
   const buildGeneratorSource = useMemo(
     () =>
       [
@@ -1192,9 +1099,6 @@ function App() {
       label: profile.source === "custom" ? `${profile.name} - Custom` : profile.name,
     }));
   }, [scriptVoiceProfiles]);
-  const selectedVideoVoice = useMemo(() => {
-    return scriptVoiceProfiles.find((profile) => profile.id === videoForm.voiceProfileId) ?? BUILT_IN_SCRIPT_VOICES[0];
-  }, [scriptVoiceProfiles, videoForm.voiceProfileId]);
   const savedFolders = useMemo(() => {
     const folders = Array.from(
       new Set(
@@ -1768,6 +1672,12 @@ function App() {
         return;
       }
 
+      if (event.key === "Escape" && isClearScriptDialogOpen) {
+        event.preventDefault();
+        setIsClearScriptDialogOpen(false);
+        return;
+      }
+
       if (event.key === "Escape" && isLoginRequiredModalOpen) {
         event.preventDefault();
         setIsLoginRequiredModalOpen(false);
@@ -1804,8 +1714,8 @@ function App() {
           "1": "prompter",
           "2": "script",
           "3": "build",
-          "4": "video",
-          "5": "help",
+          "4": "help",
+          "5": "account",
         };
         const nextTab = tabShortcuts[event.key];
 
@@ -1901,6 +1811,7 @@ function App() {
     goToPreviousPage,
     isAiGeneratorOpen,
     isAiSetupModalOpen,
+    isClearScriptDialogOpen,
     isGeneratedScriptCloseConfirmOpen,
     isLoginRequiredModalOpen,
     isMiniViewOpen,
@@ -2059,6 +1970,33 @@ function App() {
   const startNewScriptWithoutSaving = () => {
     setIsNewScriptDialogOpen(false);
     clearForNewScript();
+  };
+
+  const requestClearScript = () => {
+    setDeleteMessage(null);
+
+    if (!draft.trim()) {
+      setLibraryMessage("Script editor is already clear.");
+      return;
+    }
+
+    setIsClearScriptDialogOpen(true);
+  };
+
+  const clearScriptTextOnly = () => {
+    setIsClearScriptDialogOpen(false);
+    setDraftFromTool("");
+    setSelectedSavedScriptId("");
+    setLinkedSavedScriptId(null);
+    setCurrentPageIndex(0);
+    resetScroll();
+    setLibraryMessage("Script text cleared. Your saved library was not changed.");
+    setDeleteMessage(null);
+    setScriptPendingDeleteId("");
+
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
   };
 
   const openAiGenerator = async () => {
@@ -2427,97 +2365,6 @@ function App() {
     setCurrentPageIndex(0);
     setActiveTab("script");
     setBuildMessage(`Loaded "${item.title}" into Script.`);
-  };
-
-  const seedVideoFromCurrentScript = () => {
-    const nextTitle = scriptTitle.trim() || getDefaultScriptTitle(draft);
-    setVideoForm((current) => ({
-      ...current,
-      sourceType: current.sourceUrl.trim() || current.prompt.trim() ? "mixed" : "script",
-      title: current.title || `${nextTitle} video`,
-      prompt: current.prompt || `Create a clear demo video from this script: ${nextTitle}`,
-      scriptText: draft,
-    }));
-    setVideoMessage("Current Script text added to Video.");
-  };
-
-  const loadVideoDesignFile = async (file: File | undefined) => {
-    if (!file) {
-      return;
-    }
-
-    const text = await file.text();
-    setVideoForm((current) => ({
-      ...current,
-      designInstructions: text.slice(0, 60000),
-    }));
-    setVideoMessage(`Loaded ${file.name} into design instructions.`);
-  };
-
-  const clearVideoForm = () => {
-    setVideoForm({
-      ...EMPTY_VIDEO_FORM,
-      voiceProfileId: selectedScriptVoiceId,
-    });
-    setVideoMessage("Video form cleared.");
-  };
-
-  const createCurrentVideoJob = async () => {
-    if (!requireLogin("Sign in with GitHub and add your own keys to create video jobs.")) {
-      return;
-    }
-
-    const title = videoForm.title.trim() || getDefaultScriptTitle(videoForm.scriptText || videoForm.prompt || videoForm.sourceUrl);
-    const hasSource = Boolean(videoForm.prompt.trim() || videoForm.sourceUrl.trim() || videoForm.scriptText.trim());
-
-    if (!hasSource) {
-      setVideoMessage("Add a prompt, URL, or script before creating a video job.");
-      return;
-    }
-
-    if (!videoAiConfigured) {
-      setVideoMessage("Add an OpenAI, Claude, or OpenRouter key in Account before creating video jobs.");
-      return;
-    }
-
-    if (!heygenConfigured) {
-      setVideoMessage("Add your HeyGen / HyperFrames API key in Account before creating video jobs.");
-      return;
-    }
-
-    if ((videoForm.sourceUrl.trim() || videoForm.designUrl.trim()) && !firecrawlConfigured) {
-      setVideoMessage("Add a Firecrawl key in Account to use URL or design URL context.");
-      return;
-    }
-
-    setIsCreatingVideoJob(true);
-    setVideoMessage(null);
-
-    try {
-      const jobId = await createVideoJob({
-        sourceType: videoForm.sourceType,
-        title,
-        prompt: videoForm.prompt,
-        sourceUrl: videoForm.sourceUrl,
-        scriptText: videoForm.scriptText,
-        designInstructions: videoForm.designInstructions,
-        designUrl: videoForm.designUrl,
-        voiceProfileId: selectedVideoVoice.id,
-        voiceProfileName: selectedVideoVoice.name,
-        aspectRatio: videoForm.aspectRatio,
-        durationSeconds: videoForm.durationSeconds,
-        quality: videoForm.quality,
-        updatedAt: Date.now(),
-      });
-
-      setVideoMessage(
-        jobId
-          ? `Queued "${title}" with your HeyGen / HyperFrames key. Connect the renderer to author and render the MP4.`
-          : "Could not create that video job. Check your source, AI key, HeyGen / HyperFrames key, Firecrawl key for URLs, and login state.",
-      );
-    } finally {
-      setIsCreatingVideoJob(false);
-    }
   };
 
   const loadScriptVoiceIntoForm = (profile: ScriptVoiceProfile) => {
@@ -3032,17 +2879,7 @@ function App() {
           <Sparkle size={16} weight="bold" />
           <span>Build</span>
         </button>
-        <button
-          className={activeTab === "video" ? "tab has-tooltip is-active" : "tab has-tooltip"}
-          onClick={() => setActiveTab("video")}
-          aria-current={activeTab === "video" ? "page" : undefined}
-          title="Open video generation"
-          data-tooltip="Video"
-          type="button"
-        >
-          <VideoCamera size={16} weight="bold" />
-          <span>Video</span>
-        </button>
+        {/* Video is intentionally hidden while sandbox execution is disabled. */}
         <button
           className={activeTab === "help" ? "tab has-tooltip is-active" : "tab has-tooltip"}
           onClick={() => setActiveTab("help")}
@@ -3468,6 +3305,16 @@ function App() {
                 <h1>Write once. Prompt live.</h1>
               </div>
               <div className="header-actions">
+                <button
+                  className="save-button has-tooltip"
+                  type="button"
+                  onClick={requestClearScript}
+                  title="Clear script text"
+                  data-tooltip="Clear script"
+                >
+                  <Trash size={17} weight="bold" />
+                  Clear Script
+                </button>
                 <button
                   className="save-button has-tooltip is-primary-action"
                   type="button"
@@ -3949,294 +3796,6 @@ function App() {
           </section>
           {tabs}
         </>
-      ) : activeTab === "video" ? (
-        <>
-          <section className="video-view" aria-label="Video generation">
-            <div className="editor-header">
-              <div>
-                <p className="eyebrow">Video</p>
-                <h1 className="video-title-line">
-                  Create video jobs.
-                  <span className="beta-badge">Beta</span>
-                </h1>
-                <p className="panel-copy">
-                  Start from a prompt, URL, script, or design markdown. Video jobs require GitHub login, one AI provider key, and your HeyGen / HyperFrames key. URLs also need Firecrawl.
-                </p>
-              </div>
-              {!isAuthenticated ? (
-                <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
-                  <GithubLogo size={17} weight="bold" />
-                  Sign in
-                </button>
-              ) : null}
-            </div>
-
-            <section className="creator-console-panel video-creator-panel" aria-label="Video creator">
-              <div className="api-settings-header">
-                <div>
-                  <p className="eyebrow">Video creator</p>
-                  <h2>Describe the video. Add sources. Queue the job.</h2>
-                  <p className="panel-copy">
-                    Keep it simple: add what the video should teach or show, optionally include a URL, paste a script, and choose a Script Voice for the tone.
-                  </p>
-                </div>
-                <div className="build-summary">
-                  <span>{videoJobs.length} jobs</span>
-                  <span>{videoAiConfigured ? "AI key ready" : "AI key missing"}</span>
-                  <span>{heygenConfigured ? "HeyGen ready" : "HeyGen missing"}</span>
-                  <span>{firecrawlConfigured ? "Firecrawl ready" : "Firecrawl optional"}</span>
-                </div>
-              </div>
-
-              {!isAuthenticated ? (
-                <div className="login-inline-panel">
-                  <p>Log in to create video jobs. You can still review the setup guide below before connecting keys and a worker.</p>
-                  <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
-                    <GithubLogo size={17} weight="bold" />
-                    Sign in with GitHub
-                  </button>
-                </div>
-              ) : null}
-
-              <div className="video-form-grid">
-                <label className="field-control" htmlFor="video-title">
-                  <span>Video title</span>
-                  <input
-                    id="video-title"
-                    type="text"
-                    value={videoForm.title}
-                    onChange={(event) => setVideoForm((current) => ({ ...current, title: event.target.value }))}
-                    placeholder="Convex insights CLI demo"
-                  />
-                </label>
-                <div className="field-control">
-                  <span>Source type</span>
-                  <CustomSelect
-                    ariaLabel="Video source type"
-                    value={videoForm.sourceType}
-                    options={VIDEO_SOURCE_OPTIONS}
-                    onChange={(value) => setVideoForm((current) => ({ ...current, sourceType: value }))}
-                  />
-                </div>
-                <div className="field-control">
-                  <span>Script Voice / tone</span>
-                  <CustomSelect
-                    ariaLabel="Video tone"
-                    value={videoForm.voiceProfileId}
-                    options={scriptVoiceOptions}
-                    onChange={(value) => setVideoForm((current) => ({ ...current, voiceProfileId: value }))}
-                  />
-                </div>
-                <label className="field-control build-textarea-field is-wide" htmlFor="video-prompt">
-                  <span>Prompt</span>
-                  <textarea
-                    id="video-prompt"
-                    value={videoForm.prompt}
-                    onChange={(event) => setVideoForm((current) => ({ ...current, prompt: event.target.value }))}
-                    placeholder="Create a concise browser demo video that explains how to use Convex insights from this source."
-                  />
-                </label>
-                <label className="field-control" htmlFor="video-source-url">
-                  <span>URL context</span>
-                  <input
-                    id="video-source-url"
-                    type="url"
-                    value={videoForm.sourceUrl}
-                    onChange={(event) => setVideoForm((current) => ({ ...current, sourceUrl: event.target.value }))}
-                    placeholder="https://docs.convex.dev/cli/reference/insights"
-                  />
-                </label>
-                <div className="field-control">
-                  <span>Aspect</span>
-                  <CustomSelect
-                    ariaLabel="Video aspect ratio"
-                    value={videoForm.aspectRatio}
-                    options={VIDEO_ASPECT_OPTIONS}
-                    onChange={(value) => setVideoForm((current) => ({ ...current, aspectRatio: value }))}
-                  />
-                </div>
-                <label className="field-control" htmlFor="video-duration">
-                  <span>Target seconds</span>
-                  <input
-                    id="video-duration"
-                    type="number"
-                    min={15}
-                    max={900}
-                    value={videoForm.durationSeconds}
-                    onChange={(event) => setVideoForm((current) => ({ ...current, durationSeconds: Number(event.target.value) || 60 }))}
-                  />
-                </label>
-                <div className="field-control">
-                  <span>Quality</span>
-                  <CustomSelect
-                    ariaLabel="Video quality"
-                    value={videoForm.quality}
-                    options={VIDEO_QUALITY_OPTIONS}
-                    onChange={(value) => setVideoForm((current) => ({ ...current, quality: value }))}
-                  />
-                </div>
-                <label className="field-control build-textarea-field" htmlFor="video-script">
-                  <span>Script</span>
-                  <textarea
-                    id="video-script"
-                    value={videoForm.scriptText}
-                    onChange={(event) => setVideoForm((current) => ({ ...current, scriptText: event.target.value }))}
-                    placeholder="Paste a script, or use the current Script tab text."
-                  />
-                </label>
-                <label className="field-control build-textarea-field" htmlFor="video-design">
-                  <span>Design.md or markdown instructions</span>
-                  <textarea
-                    id="video-design"
-                    value={videoForm.designInstructions}
-                    onChange={(event) => setVideoForm((current) => ({ ...current, designInstructions: event.target.value }))}
-                    placeholder="Paste design.md, brand notes, visual style, motion rules, or scene constraints."
-                  />
-                </label>
-                <label className="field-control" htmlFor="video-design-url">
-                  <span>Design URL</span>
-                  <input
-                    id="video-design-url"
-                    type="url"
-                    value={videoForm.designUrl}
-                    onChange={(event) => setVideoForm((current) => ({ ...current, designUrl: event.target.value }))}
-                    placeholder="https://example.com/design.md"
-                  />
-                </label>
-                <label className="field-control" htmlFor="video-design-upload">
-                  <span>Upload design.md</span>
-                  <input
-                    id="video-design-upload"
-                    type="file"
-                    accept=".md,text/markdown,text/plain"
-                    onChange={(event) => void loadVideoDesignFile(event.target.files?.[0])}
-                  />
-                </label>
-              </div>
-
-              <div className="build-action-row">
-                <button className="save-button" type="button" onClick={seedVideoFromCurrentScript}>
-                  <Article size={17} weight="bold" />
-                  Use Current Script
-                </button>
-                <button className="save-button" type="button" onClick={clearVideoForm}>
-                  <Plus size={17} weight="bold" />
-                  New Video Job
-                </button>
-                <button
-                  className="save-button is-primary-action"
-                  type="button"
-                  onClick={createCurrentVideoJob}
-                  disabled={isCreatingVideoJob || (!isAuthenticated && authState.isLoading)}
-                >
-                  <VideoCamera size={17} weight="bold" />
-                  {isCreatingVideoJob ? "Queuing" : isAuthenticated ? "Generate Video" : "Log in to use"}
-                </button>
-              </div>
-              {videoMessage ? <p className="library-message">{videoMessage}</p> : null}
-            </section>
-
-            <section className="settings-panel video-setup-panel" aria-label="Video setup and instructions">
-              <button
-                className="video-setup-toggle"
-                type="button"
-                onClick={() => setIsVideoSetupOpen((current) => !current)}
-                aria-expanded={isVideoSetupOpen}
-              >
-                <span>
-                  <span className="eyebrow">Setup and how it works</span>
-                  <strong>{isVideoSetupOpen ? "Hide video instructions" : "Show video instructions"}</strong>
-                </span>
-                <CaretDown size={18} weight="bold" />
-              </button>
-              {isVideoSetupOpen ? (
-                <div className="video-setup-grid">
-                  <article>
-                    <h3>1. Add keys in Account</h3>
-                    <p>Go to Account, then BYOK settings. Save one AI key: OpenAI, Claude, or OpenRouter. That key writes the video plan and composition instructions.</p>
-                  </article>
-                  <article>
-                    <h3>2. Add HeyGen / HyperFrames</h3>
-                    <p>Every Video job needs your own HeyGen API key. PromptDeck stores it as encrypted BYOK data and uses it for HyperFrames cloud rendering.</p>
-                  </article>
-                  <article>
-                    <h3>3. Add Firecrawl for URLs</h3>
-                    <p>Firecrawl is only required when you add a docs URL, page URL, markdown link, or design URL. Prompt-only and pasted-script jobs do not need Firecrawl.</p>
-                  </article>
-                  <article>
-                    <h3>4. Add source and tone</h3>
-                    <p>Use a prompt, URL, script, or design markdown. The Video tab uses your Script Voice Profiles from Account so the video follows your saved tone.</p>
-                  </article>
-                  <article>
-                    <h3>5. Render with HyperFrames</h3>
-                    <p>PromptDeck queues the job in Convex. HyperFrames cloud rendering uses the HeyGen key saved by that signed-in user.</p>
-                  </article>
-                  <article>
-                    <h3>6. What Convex stores</h3>
-                    <p>PromptDeck saves a private video job under your GitHub account. Raw provider keys stay encrypted in BYOK settings and are never shown back to the browser.</p>
-                  </article>
-                </div>
-              ) : null}
-            </section>
-
-            <section className="settings-panel video-jobs-panel" aria-label="Recent video jobs">
-              <div className="api-settings-header">
-                <div>
-                  <p className="eyebrow">Video jobs</p>
-                  <h2>Your recent video jobs.</h2>
-                  <p className="panel-copy">Jobs are private to your GitHub account. Done jobs can expose an output URL once the renderer reports one.</p>
-                </div>
-              </div>
-              {isAuthenticated ? (
-                <div className="video-job-list">
-                  {videoJobs.length > 0 ? (
-                    videoJobs.map((job) => (
-                      <article className="video-job-card" key={job._id}>
-                        <div>
-                          <div className="build-item-heading">
-                            <span className="build-kind-chip">
-                              <VideoCamera size={14} weight="bold" />
-                              {job.aspectRatio}
-                            </span>
-                            <span className="build-status-chip">{job.status}</span>
-                          </div>
-                          <h3>{job.title}</h3>
-                          <p>{job.prompt || job.scriptText || job.sourceUrl || "No source text saved."}</p>
-                          <div className="build-item-meta">
-                            <span>{VIDEO_SOURCE_OPTIONS.find((option) => option.value === job.sourceType)?.label ?? job.sourceType}</span>
-                            <span>{job.voiceProfileName ?? "Teleprompter Natural"}</span>
-                            <span>Updated {new Date(job.updatedAt).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                        <div className="video-job-status">
-                          <strong>{Math.round(job.progress)}%</strong>
-                          <span>{job.message ?? "Waiting for worker."}</span>
-                          {job.outputUrl ? (
-                            <a href={job.outputUrl} target="_blank" rel="noreferrer">
-                              Open output
-                            </a>
-                          ) : null}
-                        </div>
-                      </article>
-                    ))
-                  ) : (
-                    <p className="editor-note">No video jobs yet. Add a source above, then generate a video job.</p>
-                  )}
-                </div>
-              ) : (
-                <div className="login-inline-panel">
-                  <p>Log in to create and see your private video jobs. Signed-out users do not save video jobs in Convex.</p>
-                  <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
-                    <GithubLogo size={17} weight="bold" />
-                    Sign in with GitHub
-                  </button>
-                </div>
-              )}
-            </section>
-            {pageFooter}
-          </section>
-          {tabs}
-        </>
       ) : activeTab === "account" ? (
         <>
           <section className="account-view" aria-label="Account and setup">
@@ -4244,7 +3803,7 @@ function App() {
               <div>
                 <p className="eyebrow">Account</p>
                 <h1>Your profile and keys.</h1>
-                <p className="panel-copy">Saved scripts, Build items, video jobs, custom Script Voice Profiles, and BYOK settings belong to your GitHub account.</p>
+                <p className="panel-copy">Saved scripts, Build items, custom Script Voice Profiles, and BYOK settings belong to your GitHub account.</p>
               </div>
               {!isAuthenticated ? (
                 <button className="save-button is-primary-action" type="button" onClick={signInWithGitHub}>
@@ -4277,10 +3836,6 @@ function App() {
                     <span>
                       <strong>{buildItems.length}</strong>
                       Build items
-                    </span>
-                    <span>
-                      <strong>{videoJobs.length}</strong>
-                      video jobs
                     </span>
                     <span>
                       <strong>{savedScriptVoiceProfiles.length}</strong>
@@ -4632,7 +4187,7 @@ function App() {
                     <div>
                       <p className="eyebrow">BYOK settings</p>
                       <h2>Bring your own keys.</h2>
-                      <p className="panel-copy">Save provider keys for AI scripts, video authoring, HyperFrames rendering, Firecrawl scraping, and narration voice. Raw keys are encrypted in Convex and never shown again.</p>
+                      <p className="panel-copy">Save provider keys for AI scripts, Firecrawl scraping, and narration voice. Raw keys are encrypted in Convex and never shown again.</p>
                     </div>
                   </div>
                   <div className="byok-requirements" aria-label="Provider setup requirements">
@@ -4747,12 +4302,12 @@ function App() {
                     <h2>Sign out or delete account.</h2>
                   </div>
                   <p className="modal-copy">
-                    This account owns your saved scripts, folders, Build items, video jobs, custom Script Voice Profiles, and encrypted BYOK settings.
+                    This account owns your saved scripts, folders, Build items, custom Script Voice Profiles, and encrypted BYOK settings.
                   </p>
                   {accountMessage ? <p className="library-message">{accountMessage}</p> : null}
                   {isDeleteAccountConfirmOpen ? (
                     <div className="account-delete-confirm" role="alert" aria-label="Delete account confirmation">
-                      <p>Delete this account and its saved PromptDeck data? This removes scripts, folders, Build items, video jobs, custom voices, saved keys, and profile data.</p>
+                      <p>Delete this account and its saved PromptDeck data? This removes scripts, folders, Build items, custom voices, saved keys, and profile data.</p>
                       <div className="modal-actions">
                         <button className="save-button" type="button" onClick={() => setIsDeleteAccountConfirmOpen(false)} disabled={isDeletingAccount}>
                           Cancel
@@ -4799,7 +4354,7 @@ function App() {
                 <h1>How PromptDeck works.</h1>
               </div>
               <p className="about-copy">
-                PromptDeck has six main areas: read in Prompter, write in Script, generate in Build, queue video jobs in Video, review docs in About, and manage profile keys and defaults in Account.
+                PromptDeck has five main areas: read in Prompter, write in Script, generate in Build, review docs in About, and manage profile keys and defaults in Account.
                 Script Voice Profiles control writing tone for AI-generated scripts. Narration voice is separate and only applies to audio features.
               </p>
               <div className="docs-grid">
@@ -4917,7 +4472,7 @@ function App() {
                     </tr>
                     <tr>
                       <td>Auth</td>
-                      <td>Convex Auth with GitHub login for private scripts, Build items, video jobs, defaults, BYOK settings, and custom Script Voice Profiles.</td>
+                      <td>Convex Auth with GitHub login for private scripts, Build items, defaults, BYOK settings, and custom Script Voice Profiles.</td>
                     </tr>
                     <tr>
                       <td>Convex components</td>
@@ -4925,7 +4480,7 @@ function App() {
                     </tr>
                     <tr>
                       <td>AI and media</td>
-                      <td>BYOK setup for OpenAI, Claude, OpenRouter, Firecrawl, ElevenLabs, and user-owned HeyGen / HyperFrames video rendering.</td>
+                      <td>BYOK setup for OpenAI, Claude, OpenRouter, Firecrawl, and ElevenLabs.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -5229,6 +4784,55 @@ function App() {
               <button className="save-button is-primary-action" type="button" onClick={saveThenStartNewScript} disabled={isSavingScript}>
                 <FloppyDisk size={17} weight="bold" />
                 {isSavingScript ? "Saving" : "Save First"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {isClearScriptDialogOpen ? (
+        <div
+          className="modal-scrim"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsClearScriptDialogOpen(false);
+            }
+          }}
+        >
+          <section
+            className="confirm-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="clear-script-title"
+            aria-describedby="clear-script-copy"
+          >
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">Clear script</p>
+                <h2 id="clear-script-title">Clear the editor text?</h2>
+              </div>
+              <button
+                className="icon-button has-tooltip"
+                type="button"
+                onClick={() => setIsClearScriptDialogOpen(false)}
+                aria-label="Cancel clear script"
+                title="Cancel clear script"
+                data-tooltip="Cancel"
+                autoFocus
+              >
+                <X size={16} weight="bold" />
+              </button>
+            </div>
+            <p id="clear-script-copy" className="modal-copy">
+              This only clears the text in the Script editor. It does not delete anything from your saved library, and this draft will detach from the loaded saved script.
+            </p>
+            <div className="modal-actions">
+              <button className="save-button" type="button" onClick={() => setIsClearScriptDialogOpen(false)}>
+                Cancel
+              </button>
+              <button className="danger-button" type="button" onClick={clearScriptTextOnly}>
+                <Trash size={17} weight="bold" />
+                Clear Script
               </button>
             </div>
           </section>
