@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Wired the new Convex voice persona into `demo-voice`, added a `/demo-voice convex persona ...` example, and documented the Convex persona reference (2026-06-22 23:41 UTC).
+- Renamed the portable demo writing skill pack and command from `demo-skills` to `demo-voice` (2026-06-22 20:31 UTC).
+- Expanded the portable `demo-voice` pack beyond scripts into human-sounding posts, docs, launch copy, README sections, DevRel explainers, and narration with a new writing formats reference (2026-06-22 20:17 UTC).
+- Added a portable `demo-voice` skill pack with PromptDeck Script Voice Profile personas, reusable demo structures, anti-slop writing checks, and ElevenLabs-style narration guidance (2026-06-22 19:16 UTC).
 - Added an explicit `deploy:static:prod` script for production Convex static hosting uploads.
 - Added a `deploy:backend:prod` script and made `deploy` run backend production deploy before static upload.
 - Added a `convex-static-hosting-deploy` skill with `/deploydev` and `/deployprod` workflows for this app.
@@ -95,6 +99,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Fixed Script tab typing so Convex autosave subscription updates no longer rehydrate the active textarea and move the caret while users edit longer scripts (2026-06-28 05:59 UTC).
 - Updated the `.agents` deploydev, deployprod, and Convex static-hosting router skills so they are app-agnostic, script-first, and safe to copy into other Convex static-hosting apps (2026-06-22 00:24 UTC).
 - Disabled the active Video tab and sandbox/Daytona execution surface so PromptDeck returns to a script-focused app while preserving historical video job data for cleanup and future rollback (2026-06-21 04:42 UTC).
 - Updated Account BYOK setup, About docs, shortcuts, and README copy to remove current Daytona Sandbox and Video job requirements (2026-06-21 04:42 UTC).

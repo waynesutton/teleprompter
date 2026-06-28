@@ -949,6 +949,7 @@ function App() {
   const initialLocalScriptState = useRef(readLocalScriptState());
   const previousAuthenticatedRef = useRef<boolean | null>(null);
   const skipNextLocalPersistRef = useRef(false);
+  const hasHydratedSavedPromptRef = useRef(false);
   const [draft, setDraft] = useState(initialLocalScriptState.current?.draft ?? DEFAULT_SCRIPT);
   const [draftUndoStack, setDraftUndoStack] = useState<string[]>([]);
   const [settings, setSettings] = useState<PromptSettings>(initialLocalScriptState.current?.settings ?? DEFAULT_SETTINGS);
@@ -1137,6 +1138,7 @@ function App() {
       })),
     ];
   }, [filteredSavedScripts]);
+  const isSavedPromptReady = savedPrompt !== undefined;
   const pages = useMemo(() => draft.split(/\n\s*---+\s*\n/g), [draft]);
   const currentScript = pages[currentPageIndex] ?? pages[0] ?? "";
   const rsvpWords = useMemo(() => splitRsvpWords(currentScript), [currentScript]);
@@ -1311,6 +1313,13 @@ function App() {
       return;
     }
 
+    setLastSavedAt(savedPrompt.updatedAt);
+
+    if (hasHydratedSavedPromptRef.current) {
+      return;
+    }
+
+    hasHydratedSavedPromptRef.current = true;
     setDraft(savedPrompt.script);
     setDraftUndoStack([]);
     setSettings({
@@ -1326,7 +1335,6 @@ function App() {
       layoutMode: savedPrompt.layoutMode,
       backgroundMode: savedPrompt.backgroundMode ?? DEFAULT_SETTINGS.backgroundMode,
     });
-    setLastSavedAt(savedPrompt.updatedAt);
   }, [savedPrompt]);
 
   useEffect(() => {
@@ -1340,6 +1348,7 @@ function App() {
     if (wasAuthenticated && !isAuthenticated) {
       const localState = readLocalScriptState();
       skipNextLocalPersistRef.current = true;
+      hasHydratedSavedPromptRef.current = false;
       setDraft(localState?.draft ?? DEFAULT_SCRIPT);
       setDraftUndoStack([]);
       setSettings(localState?.settings ?? DEFAULT_SETTINGS);
@@ -1375,7 +1384,7 @@ function App() {
   }, [authState.isLoading, draft, isAuthenticated, scriptFolder, scriptTitle, settings]);
 
   useEffect(() => {
-    if (authState.isLoading || !isAuthenticated || savedPrompt === undefined) {
+    if (authState.isLoading || !isAuthenticated || !isSavedPromptReady) {
       return;
     }
 
@@ -1398,7 +1407,7 @@ function App() {
     }, 700);
 
     return () => window.clearTimeout(saveTimer);
-  }, [authState.isLoading, draft, isAuthenticated, savedPrompt, savePrompt, settings]);
+  }, [authState.isLoading, draft, isAuthenticated, isSavedPromptReady, savePrompt, settings]);
 
   useEffect(() => {
     if (!aiPromptSettings) {
